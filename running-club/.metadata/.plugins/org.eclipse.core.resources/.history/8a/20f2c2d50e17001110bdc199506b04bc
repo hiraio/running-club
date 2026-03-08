@@ -1,0 +1,5 @@
+package com.running.club;
+
+public interface MemberRepository {
+
+}

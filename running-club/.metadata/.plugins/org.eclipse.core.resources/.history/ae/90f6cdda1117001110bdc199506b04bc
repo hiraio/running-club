@@ -1,0 +1,29 @@
+spring.application.name=running-club
+
+## 1. Database 연결 설정 (포트 6543 + SSL 권장)
+#spring.datasource.url=jdbc:postgresql://db.mialunmmkwhgkjgucero.supabase.co:6543/postgres?sslmode=require
+#spring.datasource.username=postgres
+#spring.datasource.password=ckdwns940704
+#spring.datasource.driver-class-name=org.postgresql.Driver
+
+## 2. JPA/Hibernate 설정
+#spring.jpa.hibernate.ddl-auto=update
+#spring.jpa.show-sql=true
+#spring.jpa.properties.hibernate.format_sql=true
+#spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+
+# 1. H2 로컬 DB 설정 (메모리가 아닌 파일 저장 방식 - 컴퓨터 꺼도 데이터 유지됨)
+spring.datasource.url=jdbc:h2:file:~/runningdb;AUTO_SERVER=TRUE
+spring.datasource.driver-class-name=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+
+# 2. H2 콘솔 사용 설정 (브라우저에서 DB를 확인하기 위함)
+spring.h2.console.enabled=true
+spring.h2.console.path=/h2-console
+
+# 3. JPA 설정
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
