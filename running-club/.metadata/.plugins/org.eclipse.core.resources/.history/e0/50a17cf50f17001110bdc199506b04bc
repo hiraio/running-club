@@ -1,9 +1,0 @@
-package com.running.club;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import com.running.club.member.Member;
-
-public interface MemberRepository extends JpaRepository<Member, Long> {
-	
-}

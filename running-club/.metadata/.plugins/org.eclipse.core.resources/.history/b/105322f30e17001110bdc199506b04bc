@@ -1,5 +1,0 @@
-package com.running.club;
-
-public interface MemberRepository extends JpaRepository<Member, Long> {
-	
-}
