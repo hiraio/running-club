@@ -1,0 +1,30 @@
+name: SonarCloud Analysis
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+jobs:
+  build:
+    name: Build and analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # 소나큐브 분석을 위해 전체 히스토리가 필요해요.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+      - name: Build and analyze
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 깃허브 기본 토큰
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}    # 우리가 아까 설정한 소나큐브 토큰
+        run: mvn -B verify sonar:sonar -Dsonar.projectKey=hiraio_running-club -Dsonar.organization=hiraio
