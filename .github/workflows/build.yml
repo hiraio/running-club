@@ -4,6 +4,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+
 jobs:
   build:
     name: Build and analyze
@@ -12,11 +13,13 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
+
       - name: Cache SonarCloud packages
         uses: actions/cache@v3
         with:
@@ -25,9 +28,15 @@ jobs:
           restore-keys: ${{ runner.os }}-sonar
 
       - name: Build and analyze
-        # 깃허브 액션이 'running-club' 폴더 안으로 들어가서 작업하도록 설정
+        # 깃허브 메인 화면에 running-club 폴더가 한 번 더 있는 구조라면 이 경로가 맞습니다.
         working-directory: ./running-club
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}  # 또는 설정하신 이름(SONARQUBE)으로 변경
-      run: mvn -B verify sonar:sonar \-Dsonar.projectKey=hiraio_running-club \-Dsonar.organization=hiraio \-Dsonar.host.url=https://sonarcloud.io \-DskipTests
+          # [중요] 이미지_73e900.png 확인 결과 이름은 SONAR_TOKEN입니다.
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} 
+        run: |
+          mvn -B verify sonar:sonar \
+          -Dsonar.projectKey=hiraio_running-club \
+          -Dsonar.organization=hiraio \
+          -Dsonar.host.url=https://sonarcloud.io \
+          -DskipTests
