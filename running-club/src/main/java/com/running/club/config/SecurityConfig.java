@@ -14,16 +14,19 @@ public class SecurityConfig {
 
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-		http.csrf(csrf -> csrf.disable()) // 테스트를 위해 CSRF 비활성화
-				// 1. H2 콘솔 프레임 허용 (H2 사용 시 필수)
-				.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
-
-				// 2. 권한 설정 (순서가 중요합니다!)
-				.authorizeHttpRequests(auth -> auth
-						// 누구나 접근 가능한 페이지들을 먼저 선언
-						.requestMatchers("/h2-console/**", "/join", "/login", "/css/**", "/js/**").permitAll()
-						// 그 외의 모든 요청은 로그인 필요 (가장 마지막에 위치해야 함)
-						.anyRequest().authenticated())
+	    http.csrf(csrf -> csrf.disable())
+	            .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+	            .authorizeHttpRequests(auth -> auth
+	                    // 1. 누구나 접근 가능한 경로 (조회 API 추가)
+	                    .requestMatchers("/h2-console/**", "/join", "/login", "/css/**", "/js/**").permitAll()
+	                    
+	                    // 2. [추가] 조회성 API는 인증 없이 허용 (GET 요청만)
+	                    .requestMatchers("/api/records/team/**").permitAll() 
+	                    
+	                    // 3. 만약 내 기록 조회(/api/records/my)도 테스트하고 싶다면?
+	                    // 하지만 '내 기록'은 Principal이 필요하므로 permitAll을 해도 
+	                    // 로그인 안 하면 코드가 터질 수 있으니 주의하세요!
+	                    .anyRequest().authenticated())
 
 				// 3. 로그인 설정
 				.formLogin(form -> form.loginPage("/login") // 로그인 페이지 경로

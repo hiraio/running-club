@@ -1,13 +1,15 @@
 package com.running.club.service;
 
 import java.time.LocalDate;
-
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.running.club.domain.Member;
 import com.running.club.domain.RunningRecord;
+import com.running.club.domain.RunningRecordDTO;
 import com.running.club.repository.RunningRecordRepository;
 import com.running.club.util.FileUtil;
 
@@ -17,7 +19,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class RunningRecordService {
-    private final RunningRecordRepository recordRepository;
+    private final RunningRecordRepository runningRecordRepository;
 
     @Transactional
     public void uploadRecord(Member member, Double distance, Integer duration, 
@@ -25,7 +27,7 @@ public class RunningRecordService {
         
         // 1. 이미지 해시 추출 및 중복 체크
         String hash = FileUtil.getSHA256Hash(file);
-        if (recordRepository.existsByPhotoHash(hash)) {
+        if (runningRecordRepository.existsByPhotoHash(hash)) {
             throw new IllegalStateException("이미 업로드된 사진입니다. (중복 인증 방지)");
         }
 
@@ -49,6 +51,23 @@ public class RunningRecordService {
                 .photoHash(hash)
                 .build();
 
-        recordRepository.save(record);
+        runningRecordRepository.save(record);
     }
+    
+ // RunningRecordService.java
+    public List<RunningRecordDTO> getMyRecords(Member member) {
+        return runningRecordRepository.findByMemberOrderByCreatedAtDesc(member)
+                .stream()
+                .map(RunningRecordDTO::from) // 서비스에서 변환 끝!
+                .collect(Collectors.toList());
+    }
+
+    public List<RunningRecordDTO> getRecordsByTeamId(Integer teamId) {
+        return runningRecordRepository.findByMember_TeamIdOrderByCreatedAtDesc(teamId)
+                .stream()
+                .map(RunningRecordDTO::from) // 서비스에서 변환 끝!
+                .collect(Collectors.toList());
+    }
+    
+    
 }
