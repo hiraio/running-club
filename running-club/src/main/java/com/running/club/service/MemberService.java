@@ -16,20 +16,19 @@ public class MemberService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public Long join(Member member) {
-        // 1. 아이디 중복 검증 (이메일 대신 loginId로!)
+    public Integer join(Member member) {
+        // 1. 아이디 중복 검증
         validateDuplicateMember(member);
-        
+
         // 2. 비밀번호 암호화
         String encodedPassword = passwordEncoder.encode(member.getPassword());
-        
-        // 3. 엔티티 빌더 수정 (loginId를 확실히 넣어줍니다)
+
+        // 3. 회원 저장
         Member securedMember = Member.builder()
-                .loginId(member.getLoginId()) // 이제 loginId가 핵심!
+                .loginId(member.getLoginId())
                 .password(encodedPassword)
                 .name(member.getName())
-                .email(member.getEmail())    // 이메일은 나중에 받아도 되니 일단 넣기만 함
-                .role("ROLE_USER")
+                .role("USER")
                 .build();
 
         memberRepository.save(securedMember);

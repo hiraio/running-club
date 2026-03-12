@@ -12,19 +12,22 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RunningRecordDTO {
+
     private Integer id;
     private Double distance;
     private Integer duration;
     private String runningDate;
     private String status;
     private String photoUrl;
+    private String comment;
     private LocalDateTime createdAt;
-    
-    // 나중에 "팀 정보"나 "작성자 이름"이 필요할 때 여기에 추가하면 됩니다.
-    private String userName; 
 
-    // 엔티티를 DTO로 변환하는 정적 팩토리 메서드
+    private String userName;
+    private String teamName;
+    private String groupName;
+
     public static RunningRecordDTO from(RunningRecord record) {
+        Member member = record.getMember();
         return RunningRecordDTO.builder()
                 .id(record.getId())
                 .distance(record.getDistance())
@@ -32,8 +35,11 @@ public class RunningRecordDTO {
                 .runningDate(record.getRunningDate().toString())
                 .status(record.getStatus())
                 .photoUrl(record.getPhotoUrl())
+                .comment(record.getComment())
                 .createdAt(record.getCreatedAt())
-                .userName(record.getMember().getName()) // 작성자 이름 미리 추가 (확장성)
+                .userName(member.getName())
+                .teamName(member.getTeam() != null ? member.getTeam().getTeamName() : null)
+                .groupName(member.getRunningGroup() != null ? member.getRunningGroup().getGroupName() : null)
                 .build();
     }
 }
