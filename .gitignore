@@ -1,1 +1,9 @@
-/.metadata/
+# H2 Database
+*.db
+
+# Uploaded Files (나중에 실제 저장을 시작한다면)
+/uploads/
+
+# Build artifacts
+/build/
+/out/
