@@ -42,4 +42,12 @@ public class Competition {
 
     @PrePersist
     protected void onCreate() { this.createdAt = LocalDateTime.now(); }
+
+    // ── 도메인 업데이트 메서드 ──────────────────────────────────────────────────
+    public void update(String title, LocalDate startDate, LocalDate endDate, Boolean isActive) {
+        this.title = title;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        if (isActive != null) this.isActive = isActive;
+    }
 }

@@ -65,10 +65,10 @@ notices (author_id → members.id)
 
 | 상태 | Method | Endpoint | 설명 |
 |------|--------|----------|------|
-| ❌ | POST | `/api/admin/competitions` | 대회 생성 |
-| ❌ | GET | `/api/admin/competitions` | 대회 목록 |
-| ❌ | PATCH | `/api/admin/competitions/{id}` | 대회 수정 (활성화 토글 등) |
-| ❌ | DELETE | `/api/admin/competitions/{id}` | 대회 삭제 |
+| ✅ | POST | `/api/admin/competitions` | 대회 생성 |
+| ✅ | GET | `/api/admin/competitions` | 대회 목록 (팀 수 포함) |
+| ✅ | PATCH | `/api/admin/competitions/{id}` | 대회 수정 / 상태 토글 |
+| ✅ | DELETE | `/api/admin/competitions/{id}` | 대회 삭제 (팀 존재 시 불가) |
 | ❌ | POST | `/api/admin/competitions/{id}/teams` | 팀 생성 |
 | ❌ | PATCH | `/api/admin/teams/{id}` | 팀 수정 |
 | ❌ | DELETE | `/api/admin/teams/{id}` | 팀 삭제 |
