@@ -336,8 +336,30 @@ export default function RankingPage() {
           </div>
         </div>
 
-        {/* Ranking Tabs */}
-        <Card className="border-border/50 bg-card">
+        {/* 모바일: 개인 → 조 → 팀 순서로 세로 나열 */}
+        <div className="flex flex-col gap-4 md:hidden">
+          <MobileRankingSection
+            title="개인 랭킹"
+            icon={User}
+            data={memberRankings}
+            isLoading={isMobileLoading}
+          />
+          <MobileRankingSection
+            title="조 랭킹"
+            icon={Users}
+            data={groupRankings}
+            isLoading={isMobileLoading}
+          />
+          <MobileRankingSection
+            title="팀 랭킹"
+            icon={Users}
+            data={teamRankings}
+            isLoading={isMobileLoading}
+          />
+        </div>
+
+        {/* 데스크탑: 탭 방식 */}
+        <Card className="hidden border-border/50 bg-card md:block">
           <CardHeader className="pb-0">
             <Tabs
               value={activeTab}
@@ -346,18 +368,15 @@ export default function RankingPage() {
               <TabsList className="grid w-full grid-cols-3 bg-secondary">
                 <TabsTrigger value="team" className="gap-2">
                   <Users className="h-4 w-4" />
-                  <span className="hidden sm:inline">팀 랭킹</span>
-                  <span className="sm:hidden">팀</span>
+                  팀 랭킹
                 </TabsTrigger>
                 <TabsTrigger value="group" className="gap-2">
                   <Users className="h-4 w-4" />
-                  <span className="hidden sm:inline">조 랭킹</span>
-                  <span className="sm:hidden">조</span>
+                  조 랭킹
                 </TabsTrigger>
                 <TabsTrigger value="member" className="gap-2">
                   <User className="h-4 w-4" />
-                  <span className="hidden sm:inline">개인 랭킹</span>
-                  <span className="sm:hidden">개인</span>
+                  개인 랭킹
                 </TabsTrigger>
               </TabsList>
 
