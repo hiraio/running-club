@@ -123,6 +123,85 @@ function RankingTable({
   );
 }
 
+// Mobile-optimized card list for rankings
+function MobileRankingCards({
+  data,
+  isLoading,
+}: {
+  data: RankingItem[];
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {[...Array(5)].map((_, i) => (
+          <Skeleton key={i} className="h-16 w-full rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (data.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+        <Trophy className="mb-2 h-10 w-10 opacity-50" />
+        <p className="text-sm">데이터 없음</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {data.slice(0, 5).map((item) => (
+        <div
+          key={item.entityId}
+          className={`flex items-center justify-between rounded-xl border border-border/30 bg-secondary/30 p-3 ${
+            item.rank <= 3 ? "border-primary/30 bg-primary/5" : ""
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <RankBadge rank={item.rank} />
+            <span className="font-medium">{item.name}</span>
+          </div>
+          <div className="text-right">
+            <span className="text-primary font-bold">
+              {item.totalDistance.toFixed(2)}
+            </span>
+            <span className="ml-1 text-xs text-muted-foreground">km</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Mobile section component
+function MobileRankingSection({
+  title,
+  icon: Icon,
+  data,
+  isLoading,
+}: {
+  title: string;
+  icon: React.ElementType;
+  data: RankingItem[];
+  isLoading: boolean;
+}) {
+  return (
+    <Card className="border-border/50 bg-card">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Icon className="h-5 w-5 text-primary" />
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <MobileRankingCards data={data} isLoading={isLoading} />
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function RankingPage() {
   const [competitions, setCompetitions] = useState<CompetitionForJoin[]>([]);
   const [selectedCompetition, setSelectedCompetition] = useState<string>("all");
@@ -130,6 +209,12 @@ export default function RankingPage() {
   const [rankings, setRankings] = useState<RankingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCompetitionsLoading, setIsCompetitionsLoading] = useState(true);
+
+  // Mobile: separate state for all ranking types
+  const [teamRankings, setTeamRankings] = useState<RankingItem[]>([]);
+  const [groupRankings, setGroupRankings] = useState<RankingItem[]>([]);
+  const [memberRankings, setMemberRankings] = useState<RankingItem[]>([]);
+  const [isMobileLoading, setIsMobileLoading] = useState(true);
 
   // 대회 목록 로드
   useEffect(() => {
@@ -147,6 +232,34 @@ export default function RankingPage() {
     };
     fetchCompetitions();
   }, []);
+
+  // Mobile: fetch all ranking types at once
+  useEffect(() => {
+    const fetchAllRankings = async () => {
+      setIsMobileLoading(true);
+      try {
+        const competitionId =
+          selectedCompetition === "all"
+            ? undefined
+            : Number(selectedCompetition);
+
+        const [teamData, groupData, memberData] = await Promise.all([
+          getTeamRanking(competitionId),
+          getGroupRanking(competitionId),
+          getMemberRanking(competitionId),
+        ]);
+
+        setTeamRankings(teamData);
+        setGroupRankings(groupData);
+        setMemberRankings(memberData);
+      } catch (error) {
+        console.error("랭킹 로드 실패:", error);
+      } finally {
+        setIsMobileLoading(false);
+      }
+    };
+    fetchAllRankings();
+  }, [selectedCompetition]);
 
   // 랭킹 데이터 로드
   useEffect(() => {
