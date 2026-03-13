@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { Navbar } from "@/components/Navbar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -9,14 +10,21 @@ export const metadata: Metadata = {
   description: "러닝 클럽 대회 관리 시스템",
 };
 
+export const viewport: Viewport = {
+  themeColor: "#121212",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
-      <body className={inter.className}>{children}</body>
+    <html lang="ko" className="dark nrc">
+      <body className={`${inter.className} min-h-screen bg-background text-foreground`}>
+        <Navbar isLoggedIn={false} />
+        <main>{children}</main>
+      </body>
     </html>
   );
 }
