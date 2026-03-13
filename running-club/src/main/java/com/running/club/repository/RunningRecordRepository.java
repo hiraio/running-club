@@ -26,11 +26,42 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
            "ORDER BY r.createdAt ASC")
     List<RunningRecord> findWaiting();
 
-    @Query("SELECT r FROM RunningRecord r WHERE r.member = :member ORDER BY r.createdAt DESC")
+    /**
+     * 내 기록 조회.
+     * JOIN FETCH member.team/runningGroup: RunningRecordDTO.from() 내 Lazy 접근 시 N+1 차단.
+     */
+    @Query("SELECT r FROM RunningRecord r " +
+           "JOIN FETCH r.member m " +
+           "LEFT JOIN FETCH m.team " +
+           "LEFT JOIN FETCH m.runningGroup " +
+           "WHERE r.member = :member " +
+           "ORDER BY r.createdAt DESC")
     List<RunningRecord> findByMember(@Param("member") Member member);
 
-    @Query("SELECT r FROM RunningRecord r WHERE r.member.team.id = :teamId ORDER BY r.createdAt DESC")
+    /**
+     * 팀별 기록 조회.
+     * JOIN FETCH: RunningRecordDTO.from()에서 team/runningGroup 접근 시 추가 쿼리 없음.
+     */
+    @Query("SELECT r FROM RunningRecord r " +
+           "JOIN FETCH r.member m " +
+           "LEFT JOIN FETCH m.team " +
+           "LEFT JOIN FETCH m.runningGroup " +
+           "WHERE m.team.id = :teamId " +
+           "ORDER BY r.createdAt DESC")
     List<RunningRecord> findByTeamId(@Param("teamId") Integer teamId);
+
+    /**
+     * 조별 기록 조회.
+     * member → team/runningGroup LEFT JOIN FETCH: RunningRecordDTO.from()에서
+     * member.getTeam()/getRunningGroup() 호출 시 추가 쿼리 없음 (N+1 차단).
+     */
+    @Query("SELECT r FROM RunningRecord r " +
+           "JOIN FETCH r.member m " +
+           "LEFT JOIN FETCH m.team " +
+           "LEFT JOIN FETCH m.runningGroup " +
+           "WHERE m.runningGroup.id = :groupId " +
+           "ORDER BY r.createdAt DESC")
+    List<RunningRecord> findByGroupId(@Param("groupId") Integer groupId);
 
     // ── 랭킹 쿼리 (APPROVED 기록만 집계) ──────────────────────────────────────
 
@@ -57,6 +88,32 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
            "GROUP BY m.id, m.name " +
            "ORDER BY SUM(r.distance) DESC")
     List<RankingDTO> getMemberRanking();
+
+    // ── 대회별 랭킹 쿼리 (APPROVED + 특정 competition_id 필터) ───────────────
+
+    /** 팀별 랭킹 — 특정 대회 기준 */
+    @Query("SELECT new com.running.club.domain.RankingDTO(m.team.id, m.team.teamName, SUM(r.distance), COUNT(r)) " +
+           "FROM RunningRecord r JOIN r.member m " +
+           "WHERE r.status = 'APPROVED' AND m.team IS NOT NULL AND r.competition.id = :competitionId " +
+           "GROUP BY m.team.id, m.team.teamName " +
+           "ORDER BY SUM(r.distance) DESC")
+    List<RankingDTO> getTeamRankingByCompetition(@Param("competitionId") Integer competitionId);
+
+    /** 조별 랭킹 — 특정 대회 기준 */
+    @Query("SELECT new com.running.club.domain.RankingDTO(m.runningGroup.id, m.runningGroup.groupName, SUM(r.distance), COUNT(r)) " +
+           "FROM RunningRecord r JOIN r.member m " +
+           "WHERE r.status = 'APPROVED' AND m.runningGroup IS NOT NULL AND r.competition.id = :competitionId " +
+           "GROUP BY m.runningGroup.id, m.runningGroup.groupName " +
+           "ORDER BY SUM(r.distance) DESC")
+    List<RankingDTO> getGroupRankingByCompetition(@Param("competitionId") Integer competitionId);
+
+    /** 개인별 랭킹 — 특정 대회 기준 */
+    @Query("SELECT new com.running.club.domain.RankingDTO(m.id, m.name, SUM(r.distance), COUNT(r)) " +
+           "FROM RunningRecord r JOIN r.member m " +
+           "WHERE r.status = 'APPROVED' AND r.competition.id = :competitionId " +
+           "GROUP BY m.id, m.name " +
+           "ORDER BY SUM(r.distance) DESC")
+    List<RankingDTO> getMemberRankingByCompetition(@Param("competitionId") Integer competitionId);
 
     @Modifying
     @Query("UPDATE RunningRecord r SET r.status = 'APPROVED', r.approvedBy = :admin, r.verifiedAt = :today WHERE r.id = :id AND r.status = 'WAITING'")

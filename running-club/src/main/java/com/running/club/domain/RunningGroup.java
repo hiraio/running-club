@@ -21,4 +21,9 @@ public class RunningGroup {
 
     @Column(name = "group_name", nullable = false)
     private String groupName;
+
+    // ── 도메인 업데이트 메서드 ──────────────────────────────────────────────────
+    public void update(String groupName) {
+        if (groupName != null && !groupName.isBlank()) this.groupName = groupName;
+    }
 }

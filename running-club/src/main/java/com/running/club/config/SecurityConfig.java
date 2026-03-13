@@ -21,9 +21,12 @@ public class SecurityConfig {
 	                    .requestMatchers("/h2-console/**", "/join", "/login", "/css/**", "/js/**", "/photos/**").permitAll()
 	                    
 	                    // 2. 조회성 API는 인증 없이 허용
-	                    .requestMatchers("/api/records/team/**", "/api/ranking/**").permitAll()
+	                    .requestMatchers("/api/records/team/**", "/api/records/group/**", "/api/ranking/**").permitAll()
 
-	                    // 3. 관리자 전용 API - ADMIN 권한 필요 (DB에 "ADMIN"으로 저장하므로 hasAuthority 사용)
+	                    // 3. 회원가입 지원 공개 조회 API (인증 불필요)
+	                    .requestMatchers("/api/competitions/**", "/api/teams/**").permitAll()
+
+	                    // 4. 관리자 전용 API - ADMIN 권한 필요 (DB에 "ADMIN"으로 저장하므로 hasAuthority 사용)
 	                    .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
 
 	                    .anyRequest().authenticated())

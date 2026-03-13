@@ -44,10 +44,14 @@ public class Competition {
     protected void onCreate() { this.createdAt = LocalDateTime.now(); }
 
     // ── 도메인 업데이트 메서드 ──────────────────────────────────────────────────
+    /**
+     * PATCH 부분 업데이트 — null이면 기존 값 유지 (Team.update()와 동일한 패턴).
+     * isActive=null이면 현재 상태 그대로 (명시적 토글만 반영).
+     */
     public void update(String title, LocalDate startDate, LocalDate endDate, Boolean isActive) {
-        this.title = title;
-        this.startDate = startDate;
-        this.endDate = endDate;
+        if (title != null && !title.isBlank()) this.title = title;
+        if (startDate != null) this.startDate = startDate;
+        if (endDate != null) this.endDate = endDate;
         if (isActive != null) this.isActive = isActive;
     }
 }

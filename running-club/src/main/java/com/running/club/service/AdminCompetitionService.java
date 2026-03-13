@@ -41,13 +41,19 @@ public class AdminCompetitionService {
         return CompetitionResponse.from(competitionRepository.save(competition));
     }
 
-    // 대회 수정 (제목, 기간, 활성화 여부)
+    // 대회 수정 (제목, 기간, 활성화 여부) — PATCH: null 필드는 기존 값 유지
     @Transactional
     public CompetitionResponse update(Integer id, CompetitionUpdateRequest request) {
         Competition competition = competitionRepository.findByCompetitionId(id)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 대회입니다. (id=" + id + ")"));
 
-        validateDates(request.getStartDate(), request.getEndDate());
+        // 날짜가 하나라도 변경되면, 최종 적용될 날짜(기존값 병합)로 검증
+        LocalDate effectiveStart = request.getStartDate() != null ? request.getStartDate() : competition.getStartDate();
+        LocalDate effectiveEnd   = request.getEndDate()   != null ? request.getEndDate()   : competition.getEndDate();
+        if (request.getStartDate() != null || request.getEndDate() != null) {
+            validateDates(effectiveStart, effectiveEnd);
+        }
+
         competition.update(request.getTitle(), request.getStartDate(), request.getEndDate(), request.getIsActive());
 
         // @Transactional 더티 체킹으로 자동 반영 - 별도 save 불필요
@@ -57,6 +63,10 @@ public class AdminCompetitionService {
     // 대회 삭제 (소속 팀 존재 시 삭제 불가)
     @Transactional
     public void delete(Integer id) {
+        // 존재 여부 먼저 확인 — deleteById는 없는 ID에도 조용히 통과하므로 명시적 검증
+        competitionRepository.findByCompetitionId(id)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 대회입니다. (id=" + id + ")"));
+
         long teamCount = competitionRepository.countTeamsByCompetitionId(id);
         if (teamCount > 0) {
             throw new IllegalStateException(

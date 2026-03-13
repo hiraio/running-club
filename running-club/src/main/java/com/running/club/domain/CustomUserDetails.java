@@ -1,12 +1,13 @@
 package com.running.club.domain;
 
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import lombok.Getter;
 
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 @Getter
 public class CustomUserDetails implements UserDetails {
@@ -18,11 +19,10 @@ public class CustomUserDetails implements UserDetails {
     }
 
     // 현재 유저의 권한(Role)을 반환
+    // SimpleGrantedAuthority 사용: Serializable 구현 + equals/hashCode 보장
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        Collection<GrantedAuthority> collection = new ArrayList<>();
-        collection.add(() -> member.getRole());
-        return collection;
+        return List.of(new SimpleGrantedAuthority(member.getRole()));
     }
 
     @Override

@@ -56,8 +56,12 @@ public class RunningRecordController {
 
     @GetMapping("/team/{teamId}")
     public ResponseEntity<List<RunningRecordDTO>> getTeamRecords(@PathVariable Integer teamId) {
-        // 서비스가 이미 DTO 리스트를 반환함
         return ResponseEntity.ok(runningRecordService.getRecordsByTeamId(teamId));
     }
-    
+
+    /** 조별 기록 조회 (인증 불필요 — SecurityConfig에서 /api/records/group/** permitAll) */
+    @GetMapping("/group/{groupId}")
+    public ResponseEntity<List<RunningRecordDTO>> getGroupRecords(@PathVariable Integer groupId) {
+        return ResponseEntity.ok(runningRecordService.getRecordsByGroupId(groupId));
+    }
 }
