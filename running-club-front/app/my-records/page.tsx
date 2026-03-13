@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -367,7 +367,7 @@ export default function MyRecordsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await getMyRecords();
@@ -381,11 +381,11 @@ export default function MyRecordsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     fetchRecords();
-  }, []);
+  }, [fetchRecords]);
 
   // 통계 계산
   const totalDistance = records.reduce((sum, r) => sum + r.distance, 0);

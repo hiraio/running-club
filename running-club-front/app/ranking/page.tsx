@@ -318,7 +318,7 @@ export default function RankingPage() {
             ) : (
               <Select
                 value={selectedCompetition}
-                onValueChange={setSelectedCompetition}
+                onValueChange={(value) => setSelectedCompetition(value ?? "all")}
               >
                 <SelectTrigger className="bg-card border-border">
                   <SelectValue placeholder="대회 선택" />

@@ -22,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="ko" className="dark">
       <body className={`${inter.className} min-h-screen bg-background text-foreground`}>
-        <Navbar isLoggedIn={false} />
+        <Navbar />
         <main>{children}</main>
       </body>
     </html>

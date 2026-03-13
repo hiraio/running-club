@@ -1,43 +1,53 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { login } from "@/lib/api"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { login } from "@/lib/api";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [loginId, setLoginId] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setIsLoading(true)
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
 
     try {
-      const success = await login(loginId, password)
+      const success = await login(loginId, password);
       if (success) {
-        router.push("/dashboard")
+        // 로그인 상태 저장 → Navbar 갱신에 사용
+        localStorage.setItem("loggedIn", "true");
+        router.push("/dashboard");
       } else {
-        setError("아이디 또는 비밀번호가 올바르지 않습니다.")
+        setError("아이디 또는 비밀번호가 올바르지 않습니다.");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "로그인 중 오류가 발생했습니다.")
+      setError(
+        err instanceof Error ? err.message : "로그인 중 오류가 발생했습니다."
+      );
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-background">
-      <Card className="w-full max-w-md bg-[#1c1c1c] border-border/50 shadow-xl">
+    <div className="min-h-[calc(100vh-56px)] flex items-center justify-center px-4 py-12 bg-background">
+      <Card className="w-full max-w-md bg-card border-border/50 shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
             Running Club
@@ -60,7 +70,7 @@ export default function LoginPage() {
                 onChange={(e) => setLoginId(e.target.value)}
                 required
                 disabled={isLoading}
-                className="bg-[#2a2a2a] border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
+                className="bg-secondary border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
               />
             </div>
             <div className="space-y-2">
@@ -75,7 +85,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
-                className="bg-[#2a2a2a] border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
+                className="bg-secondary border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
               />
             </div>
 
@@ -103,12 +113,15 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
             계정이 없으신가요?{" "}
-            <a href="/join" className="text-primary hover:underline font-medium">
+            <a
+              href="/join"
+              className="text-primary hover:underline font-medium"
+            >
               회원가입
             </a>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -127,7 +127,8 @@ export default function JoinPage() {
     fetchGroups();
   }, [selectedTeamId]);
 
-  const handleCompetitionSelect = (value: string) => {
+  const handleCompetitionSelect = (value: string | null) => {
+    if (!value) return;
     const id = parseInt(value, 10);
     setSelectedCompetitionId(id);
     setSelectedTeamId(null);
@@ -138,7 +139,8 @@ export default function JoinPage() {
     setError(null);
   };
 
-  const handleTeamSelect = (value: string) => {
+  const handleTeamSelect = (value: string | null) => {
+    if (!value) return;
     const id = parseInt(value, 10);
     setSelectedTeamId(id);
     setSelectedGroupId(null);
@@ -147,8 +149,8 @@ export default function JoinPage() {
     setError(null);
   };
 
-  const handleGroupSelect = (value: string) => {
-    if (value === "none") {
+  const handleGroupSelect = (value: string | null) => {
+    if (!value || value === "none") {
       setSelectedGroupId(null);
     } else {
       setSelectedGroupId(parseInt(value, 10));
