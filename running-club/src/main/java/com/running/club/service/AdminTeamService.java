@@ -20,11 +20,13 @@ import com.running.club.repository.RunningGroupRepository;
 import com.running.club.repository.TeamRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 관리자 팀/조 관리 서비스.
  * 클래스 기본: readOnly=true, 쓰기 메서드에 @Transactional 개별 오버라이드.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -40,22 +42,29 @@ public class AdminTeamService {
 
     /** 대회 내 팀 목록 조회 (그룹 수 포함) */
     public List<TeamSummaryDTO> getTeamsByCompetition(Integer competitionId) {
-        // 존재하지 않는 대회 ID 조기 차단
+        log.info("[TEAM-SVC] 팀 목록 조회 - competitionId={}", competitionId);
         competitionRepository.findByCompetitionId(competitionId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "존재하지 않는 대회입니다. (id=" + competitionId + ")"));
+                .orElseThrow(() -> {
+                    log.warn("[TEAM-SVC] 대회 없음 - competitionId={}", competitionId);
+                    return new IllegalArgumentException("존재하지 않는 대회입니다. (id=" + competitionId + ")");
+                });
 
-        return teamRepository.findAllByCompetitionIdWithGroupCount(competitionId);
+        List<TeamSummaryDTO> result = teamRepository.findAllByCompetitionIdWithGroupCount(competitionId);
+        log.info("[TEAM-SVC] 팀 목록 조회 완료 - competitionId={}, 건수={}", competitionId, result.size());
+        return result;
     }
 
     /** 팀 생성 */
     @Transactional
     public TeamResponse createTeam(Integer competitionId, TeamCreateRequest request) {
+        log.info("[TEAM-SVC] 팀 생성 - competitionId={}, teamName={}", competitionId, request.getTeamName());
         validateTeamName(request.getTeamName());
 
         Competition competition = competitionRepository.findByCompetitionId(competitionId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "존재하지 않는 대회입니다. (id=" + competitionId + ")"));
+                .orElseThrow(() -> {
+                    log.warn("[TEAM-SVC] 대회 없음 - competitionId={}", competitionId);
+                    return new IllegalArgumentException("존재하지 않는 대회입니다. (id=" + competitionId + ")");
+                });
 
         Team team = Team.builder()
                 .competition(competition)
@@ -63,22 +72,25 @@ public class AdminTeamService {
                 .colorCode(request.getColorCode())
                 .build();
 
-        return TeamResponse.from(teamRepository.save(team));
+        TeamResponse result = TeamResponse.from(teamRepository.save(team));
+        log.info("[TEAM-SVC] 팀 생성 완료 - teamId={}", result.getId());
+        return result;
     }
 
     /** 팀 수정 (이름·색상 코드 부분 변경) */
     @Transactional
     public TeamResponse updateTeam(Integer teamId, TeamUpdateRequest request) {
+        log.info("[TEAM-SVC] 팀 수정 - teamId={}", teamId);
         Team team = teamRepository.findByTeamId(teamId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "존재하지 않는 팀입니다. (id=" + teamId + ")"));
+                .orElseThrow(() -> {
+                    log.warn("[TEAM-SVC] 팀 없음 - teamId={}", teamId);
+                    return new IllegalArgumentException("존재하지 않는 팀입니다. (id=" + teamId + ")");
+                });
 
-        // teamName이 제공된 경우에만 검증 (null이면 변경 안 함)
         if (request.getTeamName() != null) validateTeamName(request.getTeamName());
 
         team.update(request.getTeamName(), request.getColorCode());
-
-        // @Transactional 더티 체킹으로 자동 반영 — 별도 save() 불필요
+        log.info("[TEAM-SVC] 팀 수정 완료 - teamId={}", teamId);
         return TeamResponse.from(team);
     }
 
@@ -89,19 +101,23 @@ public class AdminTeamService {
      */
     @Transactional
     public void deleteTeam(Integer teamId) {
+        log.info("[TEAM-SVC] 팀 삭제 시도 - teamId={}", teamId);
         teamRepository.findByTeamId(teamId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "존재하지 않는 팀입니다. (id=" + teamId + ")"));
+                .orElseThrow(() -> {
+                    log.warn("[TEAM-SVC] 팀 없음 - teamId={}", teamId);
+                    return new IllegalArgumentException("존재하지 않는 팀입니다. (id=" + teamId + ")");
+                });
 
         long memberCount = teamRepository.countMembersByTeamId(teamId);
         if (memberCount > 0) {
+            log.warn("[TEAM-SVC] 팀 삭제 불가 - teamId={}, 소속 멤버 수={}", teamId, memberCount);
             throw new IllegalStateException(
                     "소속 멤버가 있는 팀은 삭제할 수 없습니다. " +
                     "멤버를 먼저 이동하거나 탈퇴 처리하세요. (멤버 수: " + memberCount + ")");
         }
 
-        // 그룹은 Cascade(ALL) + orphanRemoval=true 로 함께 삭제됨
         teamRepository.deleteById(teamId);
+        log.info("[TEAM-SVC] 팀 삭제 완료 - teamId={}", teamId);
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -110,45 +126,56 @@ public class AdminTeamService {
 
     /** 팀 내 그룹 목록 조회 */
     public List<RunningGroupResponse> getGroupsByTeam(Integer teamId) {
+        log.info("[GROUP-SVC] 조 목록 조회 - teamId={}", teamId);
         teamRepository.findByTeamId(teamId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "존재하지 않는 팀입니다. (id=" + teamId + ")"));
+                .orElseThrow(() -> {
+                    log.warn("[GROUP-SVC] 팀 없음 - teamId={}", teamId);
+                    return new IllegalArgumentException("존재하지 않는 팀입니다. (id=" + teamId + ")");
+                });
 
-        // findAllByTeamId는 JOIN FETCH team 포함 → from() 내 team 접근 시 쿼리 추가 없음
-        return runningGroupRepository.findAllByTeamId(teamId).stream()
+        List<RunningGroupResponse> result = runningGroupRepository.findAllByTeamId(teamId).stream()
                 .map(RunningGroupResponse::from)
                 .toList();
+        log.info("[GROUP-SVC] 조 목록 조회 완료 - teamId={}, 건수={}", teamId, result.size());
+        return result;
     }
 
     /** 그룹 생성 */
     @Transactional
     public RunningGroupResponse createGroup(Integer teamId, RunningGroupCreateRequest request) {
+        log.info("[GROUP-SVC] 조 생성 - teamId={}, groupName={}", teamId, request.getGroupName());
         validateGroupName(request.getGroupName());
 
         Team team = teamRepository.findByTeamId(teamId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "존재하지 않는 팀입니다. (id=" + teamId + ")"));
+                .orElseThrow(() -> {
+                    log.warn("[GROUP-SVC] 팀 없음 - teamId={}", teamId);
+                    return new IllegalArgumentException("존재하지 않는 팀입니다. (id=" + teamId + ")");
+                });
 
         RunningGroup group = RunningGroup.builder()
                 .team(team)
                 .groupName(request.getGroupName())
                 .build();
 
-        return RunningGroupResponse.from(runningGroupRepository.save(group));
+        RunningGroupResponse result = RunningGroupResponse.from(runningGroupRepository.save(group));
+        log.info("[GROUP-SVC] 조 생성 완료 - groupId={}", result.getId());
+        return result;
     }
 
     /** 그룹 수정 (이름 변경) */
     @Transactional
     public RunningGroupResponse updateGroup(Integer groupId, RunningGroupUpdateRequest request) {
+        log.info("[GROUP-SVC] 조 수정 - groupId={}, groupName={}", groupId, request.getGroupName());
         validateGroupName(request.getGroupName());
 
         RunningGroup group = runningGroupRepository.findByGroupId(groupId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "존재하지 않는 조입니다. (id=" + groupId + ")"));
+                .orElseThrow(() -> {
+                    log.warn("[GROUP-SVC] 조 없음 - groupId={}", groupId);
+                    return new IllegalArgumentException("존재하지 않는 조입니다. (id=" + groupId + ")");
+                });
 
         group.update(request.getGroupName());
-
-        // 더티 체킹 자동 반영
+        log.info("[GROUP-SVC] 조 수정 완료 - groupId={}", groupId);
         return RunningGroupResponse.from(group);
     }
 
@@ -158,18 +185,23 @@ public class AdminTeamService {
      */
     @Transactional
     public void deleteGroup(Integer groupId) {
+        log.info("[GROUP-SVC] 조 삭제 시도 - groupId={}", groupId);
         runningGroupRepository.findByGroupId(groupId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "존재하지 않는 조입니다. (id=" + groupId + ")"));
+                .orElseThrow(() -> {
+                    log.warn("[GROUP-SVC] 조 없음 - groupId={}", groupId);
+                    return new IllegalArgumentException("존재하지 않는 조입니다. (id=" + groupId + ")");
+                });
 
         long memberCount = runningGroupRepository.countMembersByGroupId(groupId);
         if (memberCount > 0) {
+            log.warn("[GROUP-SVC] 조 삭제 불가 - groupId={}, 소속 멤버 수={}", groupId, memberCount);
             throw new IllegalStateException(
                     "소속 멤버가 있는 조는 삭제할 수 없습니다. " +
                     "멤버를 먼저 이동하거나 탈퇴 처리하세요. (멤버 수: " + memberCount + ")");
         }
 
         runningGroupRepository.deleteById(groupId);
+        log.info("[GROUP-SVC] 조 삭제 완료 - groupId={}", groupId);
     }
 
     // ════════════════════════════════════════════════════════════════

@@ -17,15 +17,18 @@ public class Member {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "login_id", unique = true, nullable = false)
+    @Column(name = "login_id", unique = true)
     private String loginId;
 
-    // oauth 유저는 password가 없을 수 있으므로 nullable
+    // 최초 로그인(이름+전화) 사용자는 아직 설정 전이므로 nullable
     @Column(columnDefinition = "text")
     private String password;
 
     @Column(nullable = false)
     private String name;
+
+    @Column(length = 20)
+    private String phone;
 
     @Builder.Default
     private String role = "USER";
@@ -47,4 +50,15 @@ public class Member {
 
     @PrePersist
     protected void onCreate() { this.createdAt = LocalDateTime.now(); }
+
+    /** loginId 또는 password가 없으면 계정 설정 필요 상태 */
+    public boolean needsSetup() {
+        return loginId == null || password == null;
+    }
+
+    /** 최초 로그인 후 계정 설정 완료 시 호출 */
+    public void setupAccount(String loginId, String encodedPassword) {
+        this.loginId = loginId;
+        this.password = encodedPassword;
+    }
 }

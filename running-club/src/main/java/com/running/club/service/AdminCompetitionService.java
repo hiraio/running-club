@@ -14,7 +14,9 @@ import com.running.club.domain.CompetitionUpdateRequest;
 import com.running.club.repository.CompetitionRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AdminCompetitionService {
@@ -24,12 +26,17 @@ public class AdminCompetitionService {
     // 전체 목록 조회 (팀 수 포함)
     @Transactional(readOnly = true)
     public List<CompetitionSummaryDTO> getAll() {
-        return competitionRepository.findAllWithTeamCount();
+        log.info("[COMPETITION-SVC] 대회 전체 목록 조회");
+        List<CompetitionSummaryDTO> result = competitionRepository.findAllWithTeamCount();
+        log.info("[COMPETITION-SVC] 대회 전체 목록 조회 완료 - 건수={}", result.size());
+        return result;
     }
 
     // 대회 생성
     @Transactional
     public CompetitionResponse create(CompetitionCreateRequest request) {
+        log.info("[COMPETITION-SVC] 대회 생성 - title={}, startDate={}, endDate={}",
+                request.getTitle(), request.getStartDate(), request.getEndDate());
         validateDates(request.getStartDate(), request.getEndDate());
 
         Competition competition = Competition.builder()
@@ -38,16 +45,21 @@ public class AdminCompetitionService {
                 .endDate(request.getEndDate())
                 .build();
 
-        return CompetitionResponse.from(competitionRepository.save(competition));
+        CompetitionResponse result = CompetitionResponse.from(competitionRepository.save(competition));
+        log.info("[COMPETITION-SVC] 대회 생성 완료 - id={}", result.getId());
+        return result;
     }
 
     // 대회 수정 (제목, 기간, 활성화 여부) — PATCH: null 필드는 기존 값 유지
     @Transactional
     public CompetitionResponse update(Integer id, CompetitionUpdateRequest request) {
+        log.info("[COMPETITION-SVC] 대회 수정 - id={}", id);
         Competition competition = competitionRepository.findByCompetitionId(id)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 대회입니다. (id=" + id + ")"));
+                .orElseThrow(() -> {
+                    log.warn("[COMPETITION-SVC] 대회 없음 - id={}", id);
+                    return new IllegalArgumentException("존재하지 않는 대회입니다. (id=" + id + ")");
+                });
 
-        // 날짜가 하나라도 변경되면, 최종 적용될 날짜(기존값 병합)로 검증
         LocalDate effectiveStart = request.getStartDate() != null ? request.getStartDate() : competition.getStartDate();
         LocalDate effectiveEnd   = request.getEndDate()   != null ? request.getEndDate()   : competition.getEndDate();
         if (request.getStartDate() != null || request.getEndDate() != null) {
@@ -55,24 +67,28 @@ public class AdminCompetitionService {
         }
 
         competition.update(request.getTitle(), request.getStartDate(), request.getEndDate(), request.getIsActive());
-
-        // @Transactional 더티 체킹으로 자동 반영 - 별도 save 불필요
+        log.info("[COMPETITION-SVC] 대회 수정 완료 - id={}", id);
         return CompetitionResponse.from(competition);
     }
 
     // 대회 삭제 (소속 팀 존재 시 삭제 불가)
     @Transactional
     public void delete(Integer id) {
-        // 존재 여부 먼저 확인 — deleteById는 없는 ID에도 조용히 통과하므로 명시적 검증
+        log.info("[COMPETITION-SVC] 대회 삭제 시도 - id={}", id);
         competitionRepository.findByCompetitionId(id)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 대회입니다. (id=" + id + ")"));
+                .orElseThrow(() -> {
+                    log.warn("[COMPETITION-SVC] 대회 없음 - id={}", id);
+                    return new IllegalArgumentException("존재하지 않는 대회입니다. (id=" + id + ")");
+                });
 
         long teamCount = competitionRepository.countTeamsByCompetitionId(id);
         if (teamCount > 0) {
+            log.warn("[COMPETITION-SVC] 대회 삭제 불가 - id={}, 소속 팀 수={}", id, teamCount);
             throw new IllegalStateException(
                     "소속 팀이 존재하는 대회는 삭제할 수 없습니다. 팀을 먼저 삭제하세요. (팀 수: " + teamCount + ")");
         }
         competitionRepository.deleteById(id);
+        log.info("[COMPETITION-SVC] 대회 삭제 완료 - id={}", id);
     }
 
     // 시작일 < 종료일 검증

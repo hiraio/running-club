@@ -12,7 +12,9 @@ import com.running.club.domain.RankingDTO;
 import com.running.club.service.RankingService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/ranking")
@@ -28,7 +30,10 @@ public class RankingController {
     @GetMapping("/teams")
     public ResponseEntity<List<RankingDTO>> teamRanking(
             @RequestParam(required = false) Integer competitionId) {
-        return ResponseEntity.ok(rankingService.getTeamRanking(competitionId));
+        log.info("[RANKING] 팀 랭킹 조회 요청 - competitionId={}", competitionId);
+        List<RankingDTO> result = rankingService.getTeamRanking(competitionId);
+        log.info("[RANKING] 팀 랭킹 조회 완료 - 건수={}", result.size());
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -39,7 +44,10 @@ public class RankingController {
     @GetMapping("/groups")
     public ResponseEntity<List<RankingDTO>> groupRanking(
             @RequestParam(required = false) Integer competitionId) {
-        return ResponseEntity.ok(rankingService.getGroupRanking(competitionId));
+        log.info("[RANKING] 조 랭킹 조회 요청 - competitionId={}", competitionId);
+        List<RankingDTO> result = rankingService.getGroupRanking(competitionId);
+        log.info("[RANKING] 조 랭킹 조회 완료 - 건수={}", result.size());
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -50,6 +58,9 @@ public class RankingController {
     @GetMapping("/members")
     public ResponseEntity<List<RankingDTO>> memberRanking(
             @RequestParam(required = false) Integer competitionId) {
-        return ResponseEntity.ok(rankingService.getMemberRanking(competitionId));
+        log.info("[RANKING] 개인 랭킹 조회 요청 - competitionId={}", competitionId);
+        List<RankingDTO> result = rankingService.getMemberRanking(competitionId);
+        log.info("[RANKING] 개인 랭킹 조회 완료 - 건수={}", result.size());
+        return ResponseEntity.ok(result);
     }
 }

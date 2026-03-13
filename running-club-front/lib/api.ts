@@ -1,5 +1,6 @@
 import type {
   ApiResponse,
+  AuthUser,
   CompetitionForJoin,
   TeamForJoin,
   GroupForJoin,
@@ -76,30 +77,60 @@ const handleError = async (res: Response): Promise<never> => {
 // ============================================================
 
 /**
- * 로그인.
- *
- * Spring Security form login 규칙:
- * - Content-Type: application/x-www-form-urlencoded (JSON 아님!)
- * - 파라미터명: username, password (SecurityConfig.usernameParameter 참고)
- * - 성공 시 302 redirect → redirect: "manual"로 받아야 쿠키가 세팅됨
- * - opaqueredirect = 성공, status 401/200(에러페이지) = 실패
- *
- * @returns true = 로그인 성공 (JSESSIONID 쿠키 세팅됨)
+ * 일반 로그인 (loginId + password, JSON).
+ * 성공 시 JSESSIONID 쿠키 세팅 후 AuthUser 반환.
+ * 실패 시 null 반환.
  */
 export const login = async (
   loginId: string,
   password: string
-): Promise<boolean> => {
-  const body = new URLSearchParams({ username: loginId, password });
-  const res = await fetch(`${BASE}/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-    credentials: "include",
-    redirect: "manual", // 302를 직접 받아야 쿠키가 설정됨
-  });
-  // type === "opaqueredirect": Spring Security가 defaultSuccessUrl로 리다이렉트한 상태
-  return res.type === "opaqueredirect" || res.status === 302;
+): Promise<AuthUser | null> => {
+  const res = await jsonRequest("POST", `${BASE}/api/auth/login`, { loginId, password });
+  if (!res.ok) return null;
+  return res.json();
+};
+
+/**
+ * 최초 로그인 (이름 + 전화번호).
+ * DB에 미리 등록된 사용자용. 성공 시 세션 수립.
+ * needsSetup=true이면 /setup-account로 이동 필요.
+ * 실패(이름/전화 불일치) 시 null 반환.
+ */
+export const firstLogin = async (
+  name: string,
+  phone: string
+): Promise<AuthUser | null> => {
+  const res = await jsonRequest("POST", `${BASE}/api/auth/first-login`, { name, phone });
+  if (!res.ok) return null;
+  return res.json();
+};
+
+/**
+ * 계정 설정 (최초 로그인 후 loginId + password 등록).
+ * 인증된 상태에서만 호출 가능.
+ * 성공 시 needsSetup=false인 AuthUser 반환.
+ */
+export const setupAccount = async (
+  loginId: string,
+  password: string
+): Promise<AuthUser> => {
+  const res = await jsonRequest("POST", `${BASE}/api/auth/setup-account`, { loginId, password });
+  if (!res.ok) await handleError(res);
+  return res.json();
+};
+
+/**
+ * 현재 로그인 사용자 정보 조회.
+ * 미인증 시 null 반환 (401).
+ */
+export const getMe = async (): Promise<AuthUser | null> => {
+  try {
+    const res = await fetch(`${BASE}/api/me`, DEFAULT_OPTS);
+    if (res.status === 401 || !res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
 };
 
 /**

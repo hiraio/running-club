@@ -19,12 +19,18 @@ import {
   LayoutDashboard,
   LogIn,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
 
 const navLinks = [
   { href: "/ranking", label: "랭킹", icon: Trophy },
-  { href: "/my-records", label: "내 기록", icon: ClipboardList },
+  { href: "/records", label: "내 기록", icon: ClipboardList },
   { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
+];
+
+const adminLinks = [
+  { href: "/admin/approvals", label: "기록 승인", icon: ShieldCheck },
+  { href: "/admin/competitions", label: "대회 관리", icon: Trophy },
 ];
 
 export function Navbar() {
@@ -99,6 +105,27 @@ export function Navbar() {
           })}
         </div>
 
+        {/* Center-Right: Admin Links (Desktop, 로그인 시) */}
+        {isLoggedIn && (
+          <div className="hidden items-center gap-1 md:flex border-l border-border/40 pl-2 ml-1">
+            {adminLinks.map((link) => {
+              const Icon = link.icon;
+              const isActive = pathname === link.href;
+              return (
+                <Link key={link.href} href={link.href}>
+                  <Button
+                    variant="ghost"
+                    className={`gap-2 text-xs ${isActive ? "text-primary" : "text-muted-foreground/70 hover:text-primary"}`}
+                  >
+                    <Icon className="size-3.5" />
+                    {link.label}
+                  </Button>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
         {/* Right: Auth Button (Desktop) */}
         <div className="hidden items-center gap-2 md:flex">
           {isLoggedIn ? (
@@ -156,6 +183,31 @@ export function Navbar() {
                   </Link>
                 );
               })}
+              {isLoggedIn && (
+                <>
+                  <div className="my-2 h-px bg-border" />
+                  <p className="px-3 text-xs text-muted-foreground/60 font-medium">관리자</p>
+                  {adminLinks.map((link) => {
+                    const Icon = link.icon;
+                    const isActive = pathname === link.href;
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <Button
+                          variant="ghost"
+                          className={`w-full justify-start gap-3 text-sm ${isActive ? "text-primary" : "text-muted-foreground/70 hover:text-primary"}`}
+                        >
+                          <Icon className="size-4" />
+                          {link.label}
+                        </Button>
+                      </Link>
+                    );
+                  })}
+                </>
+              )}
               <div className="my-4 h-px bg-border" />
               {isLoggedIn ? (
                 <Button

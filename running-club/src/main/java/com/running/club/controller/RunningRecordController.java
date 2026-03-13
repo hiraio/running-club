@@ -21,7 +21,9 @@ import com.running.club.domain.RunningRecordDTO;
 import com.running.club.service.RunningRecordService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/records")
@@ -36,32 +38,42 @@ public class RunningRecordController {
                          @RequestParam(required = false) String comment,
                          @RequestParam MultipartFile file) throws Exception {
 
-    	runningRecordService.uploadRecord(
-                userDetails.getMember(), 
-                distance, 
-                duration, 
-                LocalDate.parse(runningDate), 
-                comment, 
+        log.info("[RECORD] 기록 업로드 요청 - user={}, distance={}km, duration={}s, runningDate={}, fileSize={}bytes",
+                userDetails.getUsername(), distance, duration, runningDate, file.getSize());
+        runningRecordService.uploadRecord(
+                userDetails.getMember(),
+                distance,
+                duration,
+                LocalDate.parse(runningDate),
+                comment,
                 file
         );
-
+        log.info("[RECORD] 기록 업로드 완료 - user={}", userDetails.getUsername());
         return "기록이 등록되었습니다. 관리자 승인 후 랭킹에 반영됩니다!";
     }
-    
+
     @GetMapping("/my")
     public ResponseEntity<List<RunningRecordDTO>> getMyRecords(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        // 서비스가 이미 DTO 리스트를 반환함
-        return ResponseEntity.ok(runningRecordService.getMyRecords(userDetails.getMember()));
+        log.info("[RECORD] 내 기록 조회 요청 - user={}", userDetails.getUsername());
+        List<RunningRecordDTO> result = runningRecordService.getMyRecords(userDetails.getMember());
+        log.info("[RECORD] 내 기록 조회 완료 - user={}, 건수={}", userDetails.getUsername(), result.size());
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/team/{teamId}")
     public ResponseEntity<List<RunningRecordDTO>> getTeamRecords(@PathVariable Integer teamId) {
-        return ResponseEntity.ok(runningRecordService.getRecordsByTeamId(teamId));
+        log.info("[RECORD] 팀 기록 조회 요청 - teamId={}", teamId);
+        List<RunningRecordDTO> result = runningRecordService.getRecordsByTeamId(teamId);
+        log.info("[RECORD] 팀 기록 조회 완료 - teamId={}, 건수={}", teamId, result.size());
+        return ResponseEntity.ok(result);
     }
 
     /** 조별 기록 조회 (인증 불필요 — SecurityConfig에서 /api/records/group/** permitAll) */
     @GetMapping("/group/{groupId}")
     public ResponseEntity<List<RunningRecordDTO>> getGroupRecords(@PathVariable Integer groupId) {
-        return ResponseEntity.ok(runningRecordService.getRecordsByGroupId(groupId));
+        log.info("[RECORD] 조 기록 조회 요청 - groupId={}", groupId);
+        List<RunningRecordDTO> result = runningRecordService.getRecordsByGroupId(groupId);
+        log.info("[RECORD] 조 기록 조회 완료 - groupId={}, 건수={}", groupId, result.size());
+        return ResponseEntity.ok(result);
     }
 }

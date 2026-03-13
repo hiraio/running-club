@@ -10,7 +10,9 @@ import com.running.club.repository.CompetitionRepository;
 import com.running.club.repository.RunningRecordRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -19,49 +21,47 @@ public class RankingService {
     private final RunningRecordRepository runningRecordRepository;
     private final CompetitionRepository competitionRepository;
 
-    /**
-     * 팀 랭킹.
-     *
-     * @param competitionId null이면 전체 집계, 값이 있으면 해당 대회 기준 필터.
-     *                      존재하지 않는 competitionId → IllegalArgumentException (400).
-     */
     public List<RankingDTO> getTeamRanking(Integer competitionId) {
+        log.info("[RANKING-SVC] 팀 랭킹 조회 - competitionId={}", competitionId);
+        List<RankingDTO> result;
         if (competitionId != null) {
             validateCompetitionExists(competitionId);
-            return assignRanks(runningRecordRepository.getTeamRankingByCompetition(competitionId));
+            result = assignRanks(runningRecordRepository.getTeamRankingByCompetition(competitionId));
+        } else {
+            result = assignRanks(runningRecordRepository.getTeamRanking());
         }
-        return assignRanks(runningRecordRepository.getTeamRanking());
+        log.info("[RANKING-SVC] 팀 랭킹 조회 완료 - 건수={}", result.size());
+        return result;
     }
 
-    /**
-     * 조 랭킹.
-     *
-     * @param competitionId null이면 전체, 값이 있으면 대회 기준 필터.
-     */
     public List<RankingDTO> getGroupRanking(Integer competitionId) {
+        log.info("[RANKING-SVC] 조 랭킹 조회 - competitionId={}", competitionId);
+        List<RankingDTO> result;
         if (competitionId != null) {
             validateCompetitionExists(competitionId);
-            return assignRanks(runningRecordRepository.getGroupRankingByCompetition(competitionId));
+            result = assignRanks(runningRecordRepository.getGroupRankingByCompetition(competitionId));
+        } else {
+            result = assignRanks(runningRecordRepository.getGroupRanking());
         }
-        return assignRanks(runningRecordRepository.getGroupRanking());
+        log.info("[RANKING-SVC] 조 랭킹 조회 완료 - 건수={}", result.size());
+        return result;
     }
 
-    /**
-     * 개인 랭킹.
-     *
-     * @param competitionId null이면 전체, 값이 있으면 대회 기준 필터.
-     */
     public List<RankingDTO> getMemberRanking(Integer competitionId) {
+        log.info("[RANKING-SVC] 개인 랭킹 조회 - competitionId={}", competitionId);
+        List<RankingDTO> result;
         if (competitionId != null) {
             validateCompetitionExists(competitionId);
-            return assignRanks(runningRecordRepository.getMemberRankingByCompetition(competitionId));
+            result = assignRanks(runningRecordRepository.getMemberRankingByCompetition(competitionId));
+        } else {
+            result = assignRanks(runningRecordRepository.getMemberRanking());
         }
-        return assignRanks(runningRecordRepository.getMemberRanking());
+        log.info("[RANKING-SVC] 개인 랭킹 조회 완료 - 건수={}", result.size());
+        return result;
     }
 
     // ── private ──────────────────────────────────────────────────────────────
 
-    /** 이미 거리 내림차순으로 정렬된 리스트에 1위부터 순위 부여 */
     private List<RankingDTO> assignRanks(List<RankingDTO> list) {
         for (int i = 0; i < list.size(); i++) {
             list.get(i).setRank(i + 1);
@@ -69,13 +69,11 @@ public class RankingService {
         return list;
     }
 
-    /**
-     * 대회 존재 여부 검증.
-     * 존재하지 않는 competitionId → IllegalArgumentException → GlobalExceptionHandler → 400.
-     */
     private void validateCompetitionExists(Integer competitionId) {
         competitionRepository.findByCompetitionId(competitionId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "존재하지 않는 대회입니다. (id=" + competitionId + ")"));
+                .orElseThrow(() -> {
+                    log.warn("[RANKING-SVC] 대회 없음 - competitionId={}", competitionId);
+                    return new IllegalArgumentException("존재하지 않는 대회입니다. (id=" + competitionId + ")");
+                });
     }
 }

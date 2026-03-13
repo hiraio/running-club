@@ -1,12 +1,16 @@
 package com.running.club.config;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -19,39 +23,48 @@ public class SecurityConfig {
 	            .authorizeHttpRequests(auth -> auth
 	                    // 1. 누구나 접근 가능한 경로
 	                    .requestMatchers("/h2-console/**", "/join", "/login", "/css/**", "/js/**", "/photos/**").permitAll()
-	                    
-	                    // 2. 조회성 API는 인증 없이 허용
+
+	                    // 2. JSON 인증 API (최초 로그인 / 일반 로그인)
+	                    .requestMatchers("/api/auth/first-login", "/api/auth/login").permitAll()
+
+	                    // 3. 조회성 API는 인증 없이 허용
 	                    .requestMatchers("/api/records/team/**", "/api/records/group/**", "/api/ranking/**").permitAll()
 
-	                    // 3. 회원가입 지원 공개 조회 API (인증 불필요)
+	                    // 4. 회원가입 지원 공개 조회 API (인증 불필요)
 	                    .requestMatchers("/api/competitions/**", "/api/teams/**").permitAll()
 
-	                    // 4. 관리자 전용 API - ADMIN 권한 필요 (DB에 "ADMIN"으로 저장하므로 hasAuthority 사용)
+	                    // 5. 관리자 전용 API - ADMIN 권한 필요 (DB에 "ADMIN"으로 저장하므로 hasAuthority 사용)
 	                    .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
 
 	                    .anyRequest().authenticated())
 
-				// 3. 로그인 설정
-				.formLogin(form -> form.loginPage("/login") // 로그인 페이지 경로
-						.loginProcessingUrl("/login") // [중요] Postman에서 POST를 보낼 주소
-						.usernameParameter("username") // 아이디 파라미터명
-						.passwordParameter("password") // 비밀번호 파라미터명
-						.defaultSuccessUrl("/") // 성공 시 이동할 곳
-						.permitAll())
+			// API 경로 미인증 시 redirect 대신 401 반환 (프론트에서 JSON 파싱 실패 방지)
+			.exceptionHandling(ex -> ex
+					.defaultAuthenticationEntryPointFor(
+							(req, res, e) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"),
+							new AntPathRequestMatcher("/api/**")))
 
-				// 4. 로그아웃 설정
-				.logout(logout -> logout.logoutSuccessUrl("/login").permitAll());
+			// 로그인 설정 (form login은 /login URL 유지, JSON 로그인은 /api/auth/login)
+			.formLogin(form -> form.loginPage("/login")
+					.loginProcessingUrl("/login")
+					.usernameParameter("username")
+					.passwordParameter("password")
+					.defaultSuccessUrl("/")
+					.permitAll())
+
+			// 로그아웃 설정
+			.logout(logout -> logout.logoutSuccessUrl("/login").permitAll());
 
 		return http.build();
 	}
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(); // 비밀번호 암호화 도구
+        return new BCryptPasswordEncoder();
     }
 
-    
-    
-    
-    
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
+    }
 }

@@ -70,6 +70,21 @@ export interface GroupForJoin {
 }
 
 // ============================================================
+// 인증 — 현재 로그인 사용자
+// ============================================================
+
+/** GET /api/me 응답 */
+export interface AuthUser {
+  id: number;
+  loginId: string | null; // 계정 설정 전 VIP 사용자는 null
+  name: string;
+  role: "USER" | "ADMIN";
+  needsSetup: boolean;    // true이면 /setup-account로 리다이렉트 필요
+  groupId: number | null;
+  groupName: string | null;
+}
+
+// ============================================================
 // 인증
 // ============================================================
 

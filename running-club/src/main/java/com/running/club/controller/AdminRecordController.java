@@ -16,7 +16,9 @@ import com.running.club.domain.RunningRecordDTO;
 import com.running.club.service.AdminRecordService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/records")
@@ -26,13 +28,18 @@ public class AdminRecordController {
 
     @GetMapping("/waiting")
     public ResponseEntity<List<RunningRecordDTO>> getWaitingRecords() {
-        return ResponseEntity.ok(adminRecordService.getWaitingRecords());
+        log.info("[ADMIN-RECORD] 승인 대기 목록 조회 요청");
+        List<RunningRecordDTO> result = adminRecordService.getWaitingRecords();
+        log.info("[ADMIN-RECORD] 승인 대기 목록 조회 완료 - 건수={}", result.size());
+        return ResponseEntity.ok(result);
     }
 
     @PatchMapping("/{id}/approve")
     public ResponseEntity<String> approve(@PathVariable Integer id,
                                           @AuthenticationPrincipal CustomUserDetails userDetails) {
+        log.info("[ADMIN-RECORD] 기록 승인 요청 - recordId={}, admin={}", id, userDetails.getUsername());
         adminRecordService.approve(id, userDetails.getMember());
+        log.info("[ADMIN-RECORD] 기록 승인 완료 - recordId={}", id);
         return ResponseEntity.ok("기록 #" + id + " 승인 완료");
     }
 
@@ -40,7 +47,9 @@ public class AdminRecordController {
     public ResponseEntity<String> reject(@PathVariable Integer id,
                                          @RequestParam String reason,
                                          @AuthenticationPrincipal CustomUserDetails userDetails) {
+        log.info("[ADMIN-RECORD] 기록 반려 요청 - recordId={}, admin={}, reason={}", id, userDetails.getUsername(), reason);
         adminRecordService.reject(id, reason, userDetails.getMember());
+        log.info("[ADMIN-RECORD] 기록 반려 완료 - recordId={}", id);
         return ResponseEntity.ok("기록 #" + id + " 거절 완료");
     }
 }

@@ -14,6 +14,7 @@ import com.running.club.domain.TeamForJoinDTO;
 import com.running.club.service.PublicCompetitionService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 회원가입 지원 공개 조회 컨트롤러.
@@ -23,6 +24,7 @@ import lombok.RequiredArgsConstructor;
  * 클래스 레벨 @RequestMapping 없이 각 메서드에 전체 경로를 명시.
  * 모든 응답은 ApiResponse<T>로 일관성 유지.
  */
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 public class CompetitionController {
@@ -35,8 +37,10 @@ public class CompetitionController {
      */
     @GetMapping("/api/competitions/active")
     public ResponseEntity<ApiResponse<List<CompetitionForJoinDTO>>> getActiveCompetitions() {
-        return ResponseEntity.ok(
-                ApiResponse.ok(publicCompetitionService.getActiveCompetitions()));
+        log.info("[COMPETITION] 활성 대회 목록 조회 요청");
+        List<CompetitionForJoinDTO> result = publicCompetitionService.getActiveCompetitions();
+        log.info("[COMPETITION] 활성 대회 목록 조회 완료 - 건수={}", result.size());
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
     /**
@@ -46,8 +50,10 @@ public class CompetitionController {
     @GetMapping("/api/competitions/{competitionId}/teams")
     public ResponseEntity<ApiResponse<List<TeamForJoinDTO>>> getTeams(
             @PathVariable Integer competitionId) {
-        return ResponseEntity.ok(
-                ApiResponse.ok(publicCompetitionService.getTeamsByCompetition(competitionId)));
+        log.info("[COMPETITION] 대회 팀 목록 조회 요청 - competitionId={}", competitionId);
+        List<TeamForJoinDTO> result = publicCompetitionService.getTeamsByCompetition(competitionId);
+        log.info("[COMPETITION] 대회 팀 목록 조회 완료 - competitionId={}, 건수={}", competitionId, result.size());
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
     /**
@@ -58,7 +64,9 @@ public class CompetitionController {
     @GetMapping("/api/teams/{teamId}/groups")
     public ResponseEntity<ApiResponse<List<GroupForJoinDTO>>> getGroups(
             @PathVariable Integer teamId) {
-        return ResponseEntity.ok(
-                ApiResponse.ok(publicCompetitionService.getGroupsByTeam(teamId)));
+        log.info("[COMPETITION] 팀 조 목록 조회 요청 - teamId={}", teamId);
+        List<GroupForJoinDTO> result = publicCompetitionService.getGroupsByTeam(teamId);
+        log.info("[COMPETITION] 팀 조 목록 조회 완료 - teamId={}, 건수={}", teamId, result.size());
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 }
