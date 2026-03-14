@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { getMyRecords, uploadRecord } from "@/lib/api";
 import type { RunningRecord } from "@/lib/types";
@@ -28,27 +28,32 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  Trophy,
+  History,
+  TrendingUp,
 } from "lucide-react";
 
-const STATUS_LABEL: Record<string, { label: string; className: string }> = {
-  WAITING: { label: "대기중", className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-  APPROVED: { label: "승인됨", className: "bg-primary/20 text-primary border-primary/30" },
-  REJECTED: { label: "반려됨", className: "bg-destructive/20 text-destructive border-destructive/30" },
+// 기존 UI의 색상 체계 반영
+const STATUS_THEME: Record<string, { label: string; badge: string; icon: any; banner: string }> = {
+  WAITING: { 
+    label: "대기중", 
+    badge: "bg-[#facc15]/20 text-[#facc15] border-[#facc15]/30", 
+    icon: Loader2,
+    banner: "bg-[#facc15]/10 text-[#facc15]"
+  },
+  APPROVED: { 
+    label: "승인됨", 
+    badge: "bg-[#22c55e]/20 text-[#22c55e] border-[#22c55e]/30", 
+    icon: CheckCircle,
+    banner: "bg-[#22c55e]/10 text-[#22c55e]"
+  },
+  REJECTED: { 
+    label: "반려됨", 
+    badge: "bg-destructive/20 text-destructive border-destructive/30", 
+    icon: XCircle,
+    banner: "bg-destructive/10 text-destructive"
+  },
 };
-
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("ko-KR", {
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-  });
-}
 
 export default function RecordsPage() {
   const router = useRouter();
@@ -57,12 +62,7 @@ export default function RecordsPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    distance: "",
-    duration: "",
-    runningDate: "",
-    comment: "",
-  });
+  const [form, setForm] = useState({ distance: "", duration: "", runningDate: "", comment: "" });
   const [file, setFile] = useState<File | null>(null);
 
   const fetchRecords = useCallback(async () => {
@@ -70,18 +70,34 @@ export default function RecordsPage() {
     try {
       const data = await getMyRecords();
       setRecords(data);
-    } catch (err: unknown) {
-      if (err instanceof Error && err.message === "UNAUTHORIZED") {
-        router.push("/login");
-      }
+    } catch (err: any) {
+      if (err.message === "UNAUTHORIZED") router.push("/login");
     } finally {
       setIsLoading(false);
     }
   }, [router]);
 
-  useEffect(() => {
-    fetchRecords();
-  }, [fetchRecords]);
+  useEffect(() => { fetchRecords(); }, [fetchRecords]);
+
+  const groupedRecords = useMemo(() => {
+    const groups: Record<string, RunningRecord[]> = {};
+    [...records].sort((a, b) => new Date(b.runningDate).getTime() - new Date(a.runningDate).getTime())
+      .forEach(record => {
+        const month = new Date(record.runningDate).toLocaleDateString("ko-KR", { year: 'numeric', month: 'long' });
+        if (!groups[month]) groups[month] = [];
+        groups[month].push(record);
+      });
+    return groups;
+  }, [records]);
+
+  const stats = useMemo(() => {
+    const approved = records.filter(r => r.status === "APPROVED");
+    return {
+      totalDist: approved.reduce((acc, cur) => acc + cur.distance, 0).toFixed(2),
+      count: approved.length,
+      pending: records.filter(r => r.status === "WAITING").length
+    };
+  }, [records]);
 
   const handleUpload = async () => {
     if (!form.distance || !form.duration || !form.runningDate || !file) {
@@ -89,7 +105,6 @@ export default function RecordsPage() {
       return;
     }
     setIsUploading(true);
-    setUploadError(null);
     try {
       await uploadRecord({
         distance: parseFloat(form.distance),
@@ -102,188 +117,180 @@ export default function RecordsPage() {
       setForm({ distance: "", duration: "", runningDate: "", comment: "" });
       setFile(null);
       await fetchRecords();
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "업로드에 실패했습니다.");
+    } catch (err: any) {
+      setUploadError(err.message);
     } finally {
       setIsUploading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="min-h-screen bg-[#0c0d10] text-white p-4 pb-24 md:p-8">
       <div className="mx-auto max-w-2xl space-y-6">
-        {/* 헤더 */}
+        
+        {/* 헤더 부분 - image_22b69d.png 스타일 반영 */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <ClipboardList className="h-7 w-7 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight">내 기록</h1>
+          <div className="flex items-center gap-2">
+            <div className="bg-[#22c55e] p-1.5 rounded-lg">
+              <ClipboardList className="h-6 w-6 text-black" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight hidden md:block">내 기록</h1>
           </div>
           <Button
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            className="bg-[#22c55e] text-black font-bold hover:bg-[#22c55e]/90 rounded-xl"
             onClick={() => { setUploadError(null); setUploadOpen(true); }}
           >
-            <Plus className="h-4 w-4 mr-1.5" />
-            기록 추가
+            <Plus className="h-4 w-4 mr-1" /> 기록 추가
           </Button>
         </div>
 
-        {/* 목록 */}
+        {/* 상단 요약 카드 - image_06877d.png의 카드 스타일 반영 */}
+        <div className="grid grid-cols-3 gap-3">
+          <StatsCard label="누적 거리" value={stats.totalDist} unit="km" icon={TrendingUp} />
+          <StatsCard label="승인 횟수" value={stats.count} unit="회" icon={Trophy} />
+          <StatsCard label="검토 대기" value={stats.pending} unit="건" icon={History} />
+        </div>
+
+        {/* 월별 타임라인 리스트 */}
         {isLoading ? (
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-28 w-full rounded-xl" />
-            ))}
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-32 w-full rounded-2xl bg-[#1a1c23]" />)}
           </div>
         ) : records.length === 0 ? (
-          <Card className="border-border/50 bg-card">
-            <CardContent className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <ClipboardList className="h-14 w-14 mb-3 opacity-30" />
-              <p className="font-medium">아직 기록이 없습니다</p>
-              <p className="text-sm mt-1">첫 번째 러닝 기록을 추가해보세요!</p>
+          <Card className="bg-[#1a1c23] border-[#2a2d37] border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-20 text-gray-500">
+              <ClipboardList className="h-12 w-12 mb-4 opacity-20" />
+              <p className="font-medium">기록이 없습니다</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {records.map((r) => {
-              const st = STATUS_LABEL[r.status] ?? STATUS_LABEL.WAITING;
-              return (
-                <Card key={r.id} className="border-border/50 bg-card">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <Badge className={`text-xs border ${st.className}`}>{st.label}</Badge>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(r.runningDate)}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-3xl font-bold text-primary">
-                            {r.distance.toFixed(2)}
-                          </span>
-                          <span className="text-sm text-muted-foreground">km</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5">
-                          <Clock className="h-3.5 w-3.5" />
-                          {formatDuration(r.duration)}
-                        </div>
-                        {r.comment && (
-                          <p className="text-xs text-muted-foreground italic mt-1">"{r.comment}"</p>
-                        )}
-                      </div>
-                      {r.photoUrl ? (
-                        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary">
-                          <img src={r.photoUrl} alt="러닝 사진" className="h-full w-full object-cover" />
-                        </div>
-                      ) : (
-                        <div className="h-20 w-20 shrink-0 rounded-xl bg-secondary flex items-center justify-center">
-                          <MapPin className="h-6 w-6 text-muted-foreground/40" />
-                        </div>
-                      )}
-                    </div>
-                    {r.status === "REJECTED" && (
-                      <div className="flex items-center gap-1.5 text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">
-                        <XCircle className="h-3.5 w-3.5 shrink-0" />
-                        반려된 기록입니다. 다시 제출해주세요.
-                      </div>
-                    )}
-                    {r.status === "APPROVED" && (
-                      <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/10 rounded-lg px-3 py-2">
-                        <CheckCircle className="h-3.5 w-3.5 shrink-0" />
-                        랭킹에 반영된 기록입니다.
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="space-y-8">
+            {Object.entries(groupedRecords).map(([month, monthRecords]) => (
+              <div key={month} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold text-[#22c55e] uppercase tracking-wider">{month}</span>
+                  <div className="h-[1px] flex-1 bg-[#2a2d37]"></div>
+                </div>
+                <div className="space-y-4">
+                  {monthRecords.map((r) => <RecordCard key={r.id} record={r} />)}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      {/* 기록 추가 Dialog */}
+      {/* 기록 추가 모달 - 기존 디자인의 다크 모드 버전 */}
       <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
-        <DialogContent className="bg-card border-border sm:max-w-sm">
+        <DialogContent className="bg-[#1a1c23] border-[#2a2d37] text-white">
           <DialogHeader>
-            <DialogTitle>기록 추가</DialogTitle>
-            <DialogDescription>러닝 기록과 사진을 업로드하세요.</DialogDescription>
+            <DialogTitle>러닝 기록 추가</DialogTitle>
+            <DialogDescription className="text-gray-400">오늘 달린 기록을 인증해주세요.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>거리 (km)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="예: 5.42"
-                value={form.distance}
-                onChange={(e) => setForm({ ...form, distance: e.target.value })}
-                className="bg-background border-border"
-              />
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-gray-400">거리 (km)</Label>
+                <Input type="number" step="0.01" className="bg-[#0c0d10] border-[#2a2d37]" placeholder="5.00" value={form.distance} onChange={e => setForm({...form, distance: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-gray-400">시간 (분)</Label>
+                <Input type="number" className="bg-[#0c0d10] border-[#2a2d37]" placeholder="30" value={form.duration} onChange={e => setForm({...form, duration: e.target.value})} />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>소요 시간 (분)</Label>
-              <Input
-                type="number"
-                placeholder="예: 35"
-                value={form.duration}
-                onChange={(e) => setForm({ ...form, duration: e.target.value })}
-                className="bg-background border-border"
-              />
+            <div className="space-y-2">
+              <Label className="text-gray-400">러닝 날짜</Label>
+              <Input type="date" className="bg-[#0c0d10] border-[#2a2d37]" value={form.runningDate} onChange={e => setForm({...form, runningDate: e.target.value})} />
             </div>
-            <div className="space-y-1.5">
-              <Label>러닝 날짜</Label>
-              <Input
-                type="date"
-                value={form.runningDate}
-                onChange={(e) => setForm({ ...form, runningDate: e.target.value })}
-                className="bg-background border-border"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>한마디 (선택)</Label>
-              <Input
-                placeholder="예: 아침 러닝"
-                value={form.comment}
-                onChange={(e) => setForm({ ...form, comment: e.target.value })}
-                className="bg-background border-border"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>러닝 사진 (필수)</Label>
-              <label className="flex items-center gap-2 cursor-pointer rounded-lg border border-dashed border-border p-3 hover:border-primary/50 transition-colors">
-                <Camera className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  {file ? file.name : "사진을 선택하세요"}
-                </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                />
+            <div className="space-y-2">
+              <Label className="text-gray-400">사진 첨부</Label>
+              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[#2a2d37] rounded-xl hover:bg-[#2a2d37]/50 cursor-pointer transition-all">
+                {file ? <span className="text-[#22c55e] text-sm font-bold">{file.name}</span> : <Camera className="text-gray-600" />}
+                <input type="file" accept="image/*" className="hidden" onChange={e => setFile(e.target.files?.[0] ?? null)} />
               </label>
             </div>
-            {uploadError && <p className="text-sm text-destructive">{uploadError}</p>}
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setUploadOpen(false)}>
-              취소
-            </Button>
-            <Button
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={handleUpload}
-              disabled={isUploading}
-            >
-              {isUploading ? (
-                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />업로드 중...</>
-              ) : (
-                "업로드"
-              )}
+          <DialogFooter>
+            <Button className="w-full bg-[#22c55e] text-black font-bold h-12 rounded-xl" onClick={handleUpload} disabled={isUploading}>
+              {isUploading ? <Loader2 className="animate-spin" /> : "기록 제출"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// 서브 컴포넌트: 상단 요약 카드 (image_06877d.png 디자인 참고)
+function StatsCard({ label, value, unit, icon: Icon }: any) {
+  return (
+    <div className="bg-[#1a1c23] border border-[#2a2d37] p-4 rounded-2xl space-y-2">
+      <div className="bg-[#22c55e]/10 w-fit p-1.5 rounded-lg">
+        <Icon className="h-4 w-4 text-[#22c55e]" />
+      </div>
+      <div>
+        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">{label}</p>
+        <p className="text-lg font-black italic">{value}<span className="text-[10px] ml-0.5 not-italic text-gray-400 font-normal">{unit}</span></p>
+      </div>
+    </div>
+  );
+}
+
+// 서브 컴포넌트: 개별 기록 카드 (image_22b69d.png 디자인 완벽 반영)
+function RecordCard({ record }: { record: RunningRecord }) {
+  const theme = STATUS_THEME[record.status] || STATUS_THEME.WAITING;
+  const StatusIcon = theme.icon;
+
+  return (
+    <Card className="bg-[#1a1c23] border-[#2a2d37] overflow-hidden rounded-2xl">
+      <CardContent className="p-0">
+        <div className="p-5 flex justify-between gap-4">
+          <div className="space-y-3 flex-1">
+            <div className="flex items-center justify-between">
+              <Badge variant="outline" className={`rounded-md px-1.5 py-0 text-[10px] font-bold border-none ${theme.badge}`}>
+                {theme.label}
+              </Badge>
+              <div className="flex items-center gap-1 text-[11px] text-gray-500">
+                <Calendar className="h-3 w-3" />
+                {new Date(record.runningDate).toLocaleDateString("ko-KR", { month: "short", day: "numeric", weekday: "short" })}
+              </div>
+            </div>
+
+            <div className="space-y-0.5">
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl font-black text-[#22c55e] italic tracking-tighter">
+                  {record.distance.toFixed(2)}
+                </span>
+                <span className="text-sm font-bold text-gray-500 uppercase italic">km</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
+                <Clock className="h-3.5 w-3.5" />
+                {Math.floor(record.duration / 60)}분
+              </div>
+            </div>
+            
+            {record.comment && <p className="text-xs text-gray-500 italic">"{record.comment}"</p>}
+          </div>
+
+          <div className="h-28 w-28 shrink-0 bg-[#0c0d10] rounded-xl overflow-hidden border border-[#2a2d37]">
+            {record.photoUrl ? (
+              <img src={record.photoUrl} alt="Run" className="h-full w-full object-cover" />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center opacity-10">
+                <MapPin className="h-8 w-8 text-white" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 상태 배너 - image_22b69d.png 하단 녹색 바 스타일 */}
+        <div className={`px-4 py-2 flex items-center gap-2 text-[11px] font-bold ${theme.banner}`}>
+          <StatusIcon className={`h-3 w-3 ${record.status === 'WAITING' ? 'animate-spin' : ''}`} />
+          {record.status === 'APPROVED' && "랭킹에 반영된 기록입니다."}
+          {record.status === 'WAITING' && "관리자가 기록을 검토하고 있습니다."}
+          {record.status === 'REJECTED' && "반려된 기록입니다. 사진을 확인 후 다시 올려주세요."}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

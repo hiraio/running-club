@@ -1,6 +1,7 @@
 package com.running.club.service;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +20,37 @@ import lombok.extern.slf4j.Slf4j;
 public class RankingService {
 
     private final RunningRecordRepository runningRecordRepository;
-    private final CompetitionRepository competitionRepository;
+    private final CompetitionRepository   competitionRepository;
+    private final RankSnapshotService     rankSnapshotService;
+
+    public List<RankingDTO> getMemberRanking(Integer competitionId) {
+        log.info("[RANKING-SVC] 개인 랭킹 조회 - competitionId={}", competitionId);
+        List<RankingDTO> result;
+        if (competitionId != null) {
+            validateCompetitionExists(competitionId);
+            result = assignRanks(runningRecordRepository.getMemberRankingByCompetition(competitionId));
+            mergeRankChange(result, "MEMBER", competitionId);
+        } else {
+            result = assignRanks(runningRecordRepository.getMemberRanking());
+            // competitionId 미지정 시 rankChange 없음 (어느 대회 기준인지 불명확)
+        }
+        log.info("[RANKING-SVC] 개인 랭킹 조회 완료 - 건수={}", result.size());
+        return result;
+    }
+
+    public List<RankingDTO> getGroupRanking(Integer competitionId) {
+        log.info("[RANKING-SVC] 조 랭킹 조회 - competitionId={}", competitionId);
+        List<RankingDTO> result;
+        if (competitionId != null) {
+            validateCompetitionExists(competitionId);
+            result = assignRanks(runningRecordRepository.getGroupRankingByCompetition(competitionId));
+            mergeRankChange(result, "GROUP", competitionId);
+        } else {
+            result = assignRanks(runningRecordRepository.getGroupRanking());
+        }
+        log.info("[RANKING-SVC] 조 랭킹 조회 완료 - 건수={}", result.size());
+        return result;
+    }
 
     public List<RankingDTO> getTeamRanking(Integer competitionId) {
         log.info("[RANKING-SVC] 팀 랭킹 조회 - competitionId={}", competitionId);
@@ -34,39 +65,27 @@ public class RankingService {
         return result;
     }
 
-    public List<RankingDTO> getGroupRanking(Integer competitionId) {
-        log.info("[RANKING-SVC] 조 랭킹 조회 - competitionId={}", competitionId);
-        List<RankingDTO> result;
-        if (competitionId != null) {
-            validateCompetitionExists(competitionId);
-            result = assignRanks(runningRecordRepository.getGroupRankingByCompetition(competitionId));
-        } else {
-            result = assignRanks(runningRecordRepository.getGroupRanking());
-        }
-        log.info("[RANKING-SVC] 조 랭킹 조회 완료 - 건수={}", result.size());
-        return result;
-    }
-
-    public List<RankingDTO> getMemberRanking(Integer competitionId) {
-        log.info("[RANKING-SVC] 개인 랭킹 조회 - competitionId={}", competitionId);
-        List<RankingDTO> result;
-        if (competitionId != null) {
-            validateCompetitionExists(competitionId);
-            result = assignRanks(runningRecordRepository.getMemberRankingByCompetition(competitionId));
-        } else {
-            result = assignRanks(runningRecordRepository.getMemberRanking());
-        }
-        log.info("[RANKING-SVC] 개인 랭킹 조회 완료 - 건수={}", result.size());
-        return result;
-    }
-
     // ── private ──────────────────────────────────────────────────────────────
 
     private List<RankingDTO> assignRanks(List<RankingDTO> list) {
-        for (int i = 0; i < list.size(); i++) {
-            list.get(i).setRank(i + 1);
-        }
+        for (int i = 0; i < list.size(); i++) list.get(i).setRank(i + 1);
         return list;
+    }
+
+    /**
+     * 직전 스냅샷과 현재 순위를 비교해 rankChange를 주입.
+     * rankChange = previousRank - currentRank
+     * 스냅샷 없으면 null (NEW) 유지.
+     */
+    private void mergeRankChange(List<RankingDTO> list, String entityType, Integer competitionId) {
+        Map<Integer, Integer> prevRanks = rankSnapshotService.getLatestRanks(entityType, competitionId);
+        list.forEach(dto -> {
+            Integer prev = prevRanks.get(dto.getEntityId());
+            if (prev != null) {
+                dto.setRankChange(prev - dto.getRank());
+            }
+            // prev == null → rankChange 는 null 유지 (NEW)
+        });
     }
 
     private void validateCompetitionExists(Integer competitionId) {

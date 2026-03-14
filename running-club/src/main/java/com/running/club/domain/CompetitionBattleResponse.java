@@ -16,8 +16,11 @@ public class CompetitionBattleResponse {
 
     private Integer competitionId;
     private String  title;
-    private String  endDate;        // "yyyy-MM-dd" — D-Day 계산은 프론트에서
+    private String  status;         // "PROCEEDING" | "READY"
+    private String  endDate;        // "yyyy-MM-dd"
+    private String  startDate;      // "yyyy-MM-dd" — READY 상태일 때 카운트다운용
     private long    daysRemaining;  // 음수면 대회 종료 후
+    private long    daysUntilStart; // READY 상태: 시작까지 남은 일수 (PROCEEDING이면 0)
 
     /** 팀 배틀 — totalKm 내림차순, 1위 팀이 index 0 */
     private List<TeamSummaryDTO> teams;

@@ -5,6 +5,8 @@ import type {
   MemberProfile,
   MemberProfileRequest,
   MemberDashboardData,
+  MemberPublicProfileResponse,
+  GroupMemberDTO,
   CompetitionForJoin,
   TeamForJoin,
   GroupForJoin,
@@ -26,6 +28,7 @@ import type {
   NoticeSummary,
   NoticeDetail,
   NoticeCreateRequest,
+  RecentFeedResponse,
 } from "./types";
 
 // ============================================================
@@ -244,6 +247,14 @@ export const getActiveCompetitions = async (): Promise<
   ApiResponse<CompetitionForJoin[]>
 > => {
   const res = await fetch(`${BASE}/api/competitions/active`, DEFAULT_OPTS);
+  return res.json();
+};
+
+/** 전체 대회 목록 (PROCEEDING / READY / FINISHED 모두 포함). */
+export const getAllCompetitions = async (): Promise<
+  ApiResponse<CompetitionSummary[]>
+> => {
+  const res = await fetch(`${BASE}/api/competitions`, DEFAULT_OPTS);
   return res.json();
 };
 
@@ -641,6 +652,39 @@ export const getNotice = async (id: number): Promise<NoticeDetail> => {
   if (!res.ok) await handleError(res);
   const body: ApiResponse<NoticeDetail> = await res.json();
   return body.data;
+};
+
+// ============================================================
+// 멤버 공개 프로필
+// ============================================================
+
+/** 다른 회원의 공개 프로필 조회 (로그인 필요). */
+export const getMemberPublicProfile = async (
+  id: number
+): Promise<MemberPublicProfileResponse> => {
+  const res = await fetch(`${BASE}/api/members/${id}/profile`, DEFAULT_OPTS);
+  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  if (!res.ok) await handleError(res);
+  const body: ApiResponse<MemberPublicProfileResponse> = await res.json();
+  return body.data;
+};
+
+/** 조 전체 멤버 목록 + 달리기 통계 (로그인 필요). */
+export const getGroupMembers = async (
+  groupId: number
+): Promise<GroupMemberDTO[]> => {
+  const res = await fetch(`${BASE}/api/groups/${groupId}/members`, DEFAULT_OPTS);
+  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  if (!res.ok) await handleError(res);
+  const body: ApiResponse<GroupMemberDTO[]> = await res.json();
+  return body.data;
+};
+
+/** GET /api/records/recent — 활동 피드 (인증 불필요) */
+export const getRecentFeed = async (): Promise<RecentFeedResponse> => {
+  const res = await fetch(`${BASE}/api/records/recent`, DEFAULT_OPTS);
+  if (!res.ok) await handleError(res);
+  return res.json();
 };
 
 /** POST /api/admin/notices — 생성 (관리자) */

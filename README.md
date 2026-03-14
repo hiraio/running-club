@@ -1,21 +1,8 @@
-# Running Club - 러닝 대회 관리 시스템
+# ND-RUNNING — 러닝 클럽 대회 관리 시스템
 
-Spring Boot 기반의 러닝 클럽 대회 관리 백엔드 API입니다.
-관리자가 대회 및 팀/조를 구성하고, 사용자가 러닝 기록을 제출하면 관리자가 승인하는 구조입니다.
-
----
-
-## 핵심 흐름
-
-```
-관리자: 대회 생성 → 팀(청팀/백팀) 구성 → 조(1조/2조) 구성
-   ↓
-사용자: 회원가입 시 팀/조 선택 → 러닝 기록 + 사진 업로드
-   ↓
-관리자: 기록 승인 / 반려 (사유 포함)
-   ↓
-공개: 팀별 · 조별 · 개인별 랭킹 조회 (전체 / 대회별 필터)
-```
+팀을 나눠 달리기 대회를 진행하는 러닝 클럽을 위한 풀스택 웹 애플리케이션.
+관리자가 대회·팀·조를 구성하고, 회원들이 러닝 기록을 제출하면 관리자가 승인하는 구조.
+실시간 팀 배틀 현황, 조별 기여도, 개인 랭킹을 제공하며 회원끼리 서로의 프로필을 조회할 수 있음.
 
 ---
 
@@ -23,13 +10,168 @@ Spring Boot 기반의 러닝 클럽 대회 관리 백엔드 API입니다.
 
 | 분류 | 기술 |
 |------|------|
-| Framework | Spring Boot 3.4.3 |
-| Language | Java 17 |
-| ORM | Spring Data JPA / Hibernate |
-| DB | PostgreSQL (Supabase) / H2 (로컬 개발) |
-| Security | Spring Security 6 + BCrypt (세션 기반) |
-| Build | Maven |
-| Monitoring | Spring Actuator + Prometheus |
+| Frontend | Next.js 15 (App Router), TypeScript, Tailwind CSS, shadcn/ui, Framer Motion |
+| Backend | Spring Boot 3.4, Java 17, Spring Data JPA, Spring Security 6 |
+| DB | H2 (로컬) / PostgreSQL Supabase (운영) |
+| 인증 | 세션 기반 (JSESSIONID 쿠키) + BCrypt |
+| 모니터링 | Spring Actuator + Prometheus |
+
+---
+
+## 로컬 실행
+
+```bash
+# 백엔드 (http://localhost:8080)
+cd running-club && ./mvnw spring-boot:run
+
+# 프론트엔드 (http://localhost:3000)
+cd running-club-front && npm run dev
+
+# H2 콘솔 (로컬 DB 조회)
+http://localhost:8080/h2-console
+JDBC URL: jdbc:h2:file:~/runningdb
+```
+
+**테스트 계정**
+| 계정 | 비밀번호 | 역할 |
+|------|----------|------|
+| admin | admin1234 | 관리자 |
+| user1 ~ user4 | user1234 | 일반 |
+| 이름: VIP테스터 / 전화: 010-9999-0001 | — | VIP (최초 로그인) |
+
+---
+
+## 핵심 흐름
+
+```
+관리자: 대회 생성 → 팀(청팀/백팀) 구성 → 조(1조/2조/3조) 구성
+   ↓
+사용자: 회원가입 시 조 선택 (팀/대회 자동 귀속) → 러닝 기록 + 사진 업로드
+   ↓
+관리자: 기록 승인 / 반려 (사유 포함)
+   ↓
+공개: 팀 배틀 현황 · 조별 기여도 · 개인 랭킹 (순위 변동 ▲▼ 포함)
+   ↓
+회원: 다른 사람 이름 클릭 → 프로필 페이지 (기록·통계·자기소개)
+```
+
+---
+
+## 주요 기능
+
+### 대회 관리
+- 관리자가 대회 생성 → 팀 → 조 순서로 구성
+- 대회 상태 자동 계산: `READY` / `PROCEEDING` / `FINISHED` (DB 컬럼 없이 런타임)
+- 진행 중인 대회의 팀 배틀 현황 실시간 표시
+
+### 러닝 기록
+- 사진 + 거리/시간 업로드 → WAITING 상태로 대기
+- **중복 사진 방지**: SHA-256 해시 비교
+- **속도 검증**: 45km/h 초과 시 업로드 거부
+- 관리자 승인(APPROVED) 후 랭킹에 반영
+
+### 랭킹 & 배틀
+- 팀 랭킹 · 조별 기여도 · 개인 순위 (전체 / 대회별 필터)
+- **순위 변동** (▲▼NEW): `rank_snapshots` 테이블, 매일 자정 KST 스케줄러 갱신
+- 팀 배틀 진행률 바 + D-Day + 기여도 1위 조 하이라이트
+
+### 멤버 프로필 조회
+- 랭킹 이름 클릭 → `/members/{id}` 풀페이지 (인스타 프로필 느낌)
+- 표시 내용: 이름/팀/조/학교/전공/자기소개 + 달리기 통계 + 최근 기록 5건
+- 조 기여도 카드 **(n명)** 클릭 → 조 멤버 목록 Sheet → 멤버 클릭 → 프로필 페이지
+- 대시보드 "내 조 멤버" 섹션에서도 동일하게 진입 가능
+- 본인 클릭은 `/dashboard` 이동, 다른 사람 페이지에서는 편집 불가
+
+### 사용자 대시보드
+- 목표 거리 설정 + 원형 진행 링 (GoalProgressRing)
+- 팀 대항전 카드 (내 기여도 %)
+- 내 조 멤버 목록 (km 순 정렬, 이름 클릭 → 프로필)
+- 프로필 편집 모달 (학교/전공/자기소개/목표거리)
+
+### VIP 최초 로그인
+- 관리자가 미리 등록한 VIP 사용자: 이름+전화로 인증 → loginId/password 설정
+
+---
+
+## 페이지 구조
+
+```
+/                   홈 (팀 배틀 현황 + 활동 피드 + 응원 멘트)
+/dashboard          내 마이페이지 (편집 가능)
+/members/[id]       다른 사람 마이페이지 (읽기 전용, 네비 없음)
+/ranking            랭킹 (개인 → 팀 배틀 → 조별 기여도)
+/competition        대회 목록
+/competition/[id]   대회 상세 (팀 목록 · 랭킹 링크)
+/records            내 기록 업로드 · 조회
+/notices            공지사항
+/admin/**           관리자 전용
+```
+
+---
+
+## API 목록
+
+### 인증
+| Method | Endpoint | 설명 | 인증 |
+|--------|----------|------|------|
+| POST | `/join` | 회원가입 (groupId → 팀/대회 자동 귀속) | 불필요 |
+| POST | `/api/auth/login` | 로그인 (JSON) | 불필요 |
+| POST | `/api/auth/first-login` | VIP 최초 로그인 (이름+전화) | 불필요 |
+| POST | `/api/auth/setup-account` | 계정 설정 (loginId+password 등록) | 세션 |
+| GET | `/api/me` | 내 정보 | 필요 |
+| POST | `/logout` | 로그아웃 (200 반환) | 필요 |
+
+### 내 프로필 & 대시보드
+| Method | Endpoint | 설명 | 인증 |
+|--------|----------|------|------|
+| GET | `/api/me/dashboard` | 대시보드 통합 데이터 (프로필+통계+기록) | 필요 |
+| GET | `/api/me/profile` | 내 프로필 조회 | 필요 |
+| PUT | `/api/me/profile` | 프로필 수정 (부분 업데이트) | 필요 |
+
+### 멤버 공개 프로필
+| Method | Endpoint | 설명 | 인증 |
+|--------|----------|------|------|
+| GET | `/api/members/{id}/profile` | 특정 회원 프로필 + 최근기록 5건 | 필요 |
+| GET | `/api/groups/{id}/members` | 조 멤버 목록 + 통계 (km DESC 정렬) | 필요 |
+
+### 공개 조회
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/api/competitions` | 전체 대회 목록 |
+| GET | `/api/competitions/active` | 활성 대회 (READY+PROCEEDING) |
+| GET | `/api/competitions/active/battle` | 팀 배틀 현황 (기여도+MVP) |
+| GET | `/api/competitions/{id}/teams` | 대회 내 팀 목록 |
+| GET | `/api/competitions/{id}/groups` | 대회 내 전체 조 목록 |
+| GET | `/api/teams/{id}/groups` | 팀 내 조 목록 |
+| GET | `/api/ranking/teams` | 팀 랭킹 (`?competitionId=` 선택) |
+| GET | `/api/ranking/groups` | 조 랭킹 (`?competitionId=` 선택) |
+| GET | `/api/ranking/members` | 개인 랭킹 (`?competitionId=` 선택) |
+| GET | `/api/records/team/{id}` | 팀 기록 |
+| GET | `/api/records/group/{id}` | 조 기록 |
+| GET | `/api/records/recent` | 최신 활동 피드 |
+| GET | `/api/notices` | 공지사항 목록 |
+| GET | `/api/notices/{id}` | 공지 상세 |
+
+### 기록 (로그인 필요)
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| POST | `/api/records` | 기록 + 사진 업로드 (multipart) |
+| GET | `/api/records/my` | 내 기록 조회 |
+
+### 관리자 전용
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET/POST | `/api/admin/competitions` | 대회 목록/생성 |
+| PATCH/DELETE | `/api/admin/competitions/{id}` | 대회 수정/삭제 |
+| GET/POST | `/api/admin/competitions/{id}/teams` | 팀 목록/생성 |
+| PATCH/DELETE | `/api/admin/teams/{id}` | 팀 수정/삭제 |
+| GET/POST | `/api/admin/teams/{id}/groups` | 조 목록/생성 |
+| PATCH/DELETE | `/api/admin/groups/{id}` | 조 수정/삭제 |
+| GET | `/api/admin/records/waiting` | 승인 대기 기록 |
+| PATCH | `/api/admin/records/{id}/approve` | 기록 승인 |
+| PATCH | `/api/admin/records/{id}/reject` | 기록 반려 (`?reason=`) |
+| GET/POST | `/api/admin/notices` | 공지 목록/생성 |
+| PATCH/DELETE | `/api/admin/notices/{id}` | 공지 수정/삭제 |
 
 ---
 
@@ -40,166 +182,45 @@ competitions
   └── teams (competition_id)
         └── running_groups (team_id)
               └── members (team_id, group_id)
+                    ├── member_profiles (member_id 1:1)
                     └── running_records (member_id, competition_id)
 
-notices (독립 테이블, author: String)
+rank_snapshots (entity_type, entity_id, competition_id, rank, snapshot_date)
+notices (독립 테이블)
 ```
 
----
-
-## API 목록 및 구현 현황
-
-### 인증
-
-| 상태 | Method | Endpoint | 설명 |
-|------|--------|----------|------|
-| ✅ | POST | `/join` | 회원가입 (JSON body: loginId/password/name/teamId/groupId) |
-| ✅ | POST | `/login` | 로그인 (Spring Security form-urlencoded) |
-
----
-
-### 관리자 - 대회 세팅 (`ADMIN` 전용)
-
-| 상태 | Method | Endpoint | 설명 |
-|------|--------|----------|------|
-| ✅ | GET | `/api/admin/competitions` | 대회 목록 (팀 수 포함) |
-| ✅ | POST | `/api/admin/competitions` | 대회 생성 |
-| ✅ | PATCH | `/api/admin/competitions/{id}` | 대회 수정 / 상태 토글 (부분 업데이트) |
-| ✅ | DELETE | `/api/admin/competitions/{id}` | 대회 삭제 (팀 존재 시 불가) |
-| ✅ | GET | `/api/admin/competitions/{id}/teams` | 대회별 팀 목록 (조 수 포함) |
-| ✅ | POST | `/api/admin/competitions/{id}/teams` | 팀 생성 |
-| ✅ | PATCH | `/api/admin/teams/{id}` | 팀 수정 (부분 업데이트) |
-| ✅ | DELETE | `/api/admin/teams/{id}` | 팀 삭제 (멤버 존재 시 불가, 조 Cascade 삭제) |
-| ✅ | GET | `/api/admin/teams/{id}/groups` | 팀별 조 목록 |
-| ✅ | POST | `/api/admin/teams/{id}/groups` | 조 생성 |
-| ✅ | PATCH | `/api/admin/groups/{id}` | 조 수정 |
-| ✅ | DELETE | `/api/admin/groups/{id}` | 조 삭제 (멤버 존재 시 불가) |
-
----
-
-### 관리자 - 기록 승인/반려 (`ADMIN` 전용)
-
-| 상태 | Method | Endpoint | 설명 |
-|------|--------|----------|------|
-| ✅ | GET | `/api/admin/records/waiting` | 승인 대기 목록 |
-| ✅ | PATCH | `/api/admin/records/{id}/approve` | 기록 승인 |
-| ✅ | PATCH | `/api/admin/records/{id}/reject` | 기록 반려 (`?reason=사유`) |
-
----
-
-### 회원가입 지원 조회 (PUBLIC, 인증 불필요)
-
-| 상태 | Method | Endpoint | 설명 |
-|------|--------|----------|------|
-| ✅ | GET | `/api/competitions/active` | 활성 대회 목록 (READY + PROCEEDING) |
-| ✅ | GET | `/api/competitions/{id}/teams` | 대회 내 팀 목록 (종료 대회 400 차단) |
-| ✅ | GET | `/api/teams/{id}/groups` | 팀 내 조 목록 |
-
----
-
-### 기록 조회
-
-| 상태 | Method | Endpoint | 설명 |
-|------|--------|----------|------|
-| ✅ | POST | `/api/records` | 기록 + 사진 업로드 (인증 필요) |
-| ✅ | GET | `/api/records/my` | 내 기록 조회 (인증 필요) |
-| ✅ | GET | `/api/records/team/{teamId}` | 팀 기록 조회 (PUBLIC) |
-| ✅ | GET | `/api/records/group/{groupId}` | 조 기록 조회 (PUBLIC) |
-
----
-
-### 랭킹 (PUBLIC, 인증 불필요)
-
-| 상태 | Method | Endpoint | 설명 |
-|------|--------|----------|------|
-| ✅ | GET | `/api/ranking/teams` | 팀 랭킹 (전체 또는 `?competitionId={id}`) |
-| ✅ | GET | `/api/ranking/groups` | 조 랭킹 (전체 또는 `?competitionId={id}`) |
-| ✅ | GET | `/api/ranking/members` | 개인 랭킹 (전체 또는 `?competitionId={id}`) |
-
----
-
-### 공지사항
-
-| 상태 | Method | Endpoint | 설명 |
-|------|--------|----------|------|
-| ❌ | GET | `/api/notices` | 공지 목록 (PUBLIC) |
-| ❌ | GET | `/api/notices/{id}` | 공지 상세 (PUBLIC) |
-| ❌ | POST | `/api/admin/notices` | 공지 작성 (ADMIN) |
-| ❌ | PATCH | `/api/admin/notices/{id}` | 공지 수정 (ADMIN) |
-| ❌ | DELETE | `/api/admin/notices/{id}` | 공지 삭제 (ADMIN) |
-
----
-
-### 관리자 - 회원 관리
-
-| 상태 | Method | Endpoint | 설명 |
-|------|--------|----------|------|
-| ❌ | GET | `/api/admin/members` | 전체 회원 목록 |
-| ❌ | PATCH | `/api/admin/members/{id}/role` | 권한 변경 (USER ↔ ADMIN) |
-| ❌ | PATCH | `/api/admin/members/{id}/assignment` | 팀/조 재배정 |
-
----
-
-## 주요 기능 상세
-
-### 러닝 기록 검증 로직
-- **중복 사진 방지**: 사진 파일의 SHA-256 해시를 DB에 저장하여 동일 사진 재업로드 차단
-- **속도 검증**: 거리 ÷ 시간으로 시속을 계산하여 45km/h 초과 시 업로드 거부
-- **승인 워크플로**: 업로드 → `WAITING` → 관리자 검토 → `APPROVED` / `REJECTED`
-- **competition_id 자동 연결**: 업로드 시 member.team.competition 경로로 자동 도출
-
-### 보안
-- Spring Security 6 세션 기반 인증 (JSESSIONID 쿠키)
-- 역할: `USER` (일반) / `ADMIN` (관리자) — `hasAuthority()` 사용 (ROLE_ 접두사 없음)
-- `/api/admin/**` 는 ADMIN 권한만 접근 가능
-- 회원가입 시 팀/조 cross-injection 방지 검증 (groupId가 해당 teamId 소속인지 확인)
-- 사진 파일은 서버 로컬 저장 (`C:/running-photos/`) + UUID 파일명
-
-### CORS
-- `http://localhost:3000` (Next.js 개발 서버) 허용
-- `allowCredentials: true` — 세션 쿠키 포함 요청 허용
-
-### Competition 상태 계산
-- `CompetitionStatus` (READY / PROCEEDING / FINISHED)는 DB 컬럼 없이 런타임 계산
-- `isActive=false` 이면 강제 FINISHED
-
-### 삭제 안전장치
-- 대회 삭제: 소속 팀 존재 시 차단
-- 팀 삭제: 소속 멤버 존재 시 차단 / 소속 조는 Cascade 자동 삭제
-- 조 삭제: 소속 멤버 존재 시 차단
-
----
-
-## 로컬 실행
-
-```bash
-# H2 파일 DB로 실행 (기본값)
-cd running-club
-./mvnw spring-boot:run
-
-# H2 Console
-http://localhost:8080/h2-console
-JDBC URL: jdbc:h2:file:~/runningdb
-
-# 관리자 계정 만들기
-# 1. POST /join 으로 계정 생성
-# 2. H2 Console: UPDATE members SET role='ADMIN' WHERE login_id='admin';
+### 운영 DB 마이그레이션 (Supabase PostgreSQL)
+```sql
+ALTER TABLE members ALTER COLUMN login_id DROP NOT NULL;
+ALTER TABLE members ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+CREATE TABLE IF NOT EXISTS rank_snapshots (
+    id BIGSERIAL PRIMARY KEY, entity_type VARCHAR(20) NOT NULL,
+    entity_id INT NOT NULL, competition_id BIGINT NOT NULL REFERENCES competitions(id),
+    rank INT NOT NULL, snapshot_date DATE NOT NULL,
+    UNIQUE (entity_type, entity_id, competition_id, snapshot_date)
+);
 ```
 
 ---
 
 ## 응답 포맷
 
-공개 API (인증 불필요) 응답:
+공개 API (인증 불필요):
 ```json
 { "success": true,  "data": [...], "message": null }
 { "success": false, "data": null,  "message": "에러 메시지" }
 ```
-
-관리자 API는 ResponseEntity 직접 반환.
+관리자/인증 API는 데이터 직접 반환 (래퍼 없음).
 
 ---
 
 ## 모니터링
 
-Prometheus 메트릭: `GET /actuator/prometheus`
+```
+GET /actuator/prometheus
+```
+
+---
+
+## 미구현
+- 관리자 회원 관리 (목록 조회 / 역할 변경 / 팀·조 재배정)

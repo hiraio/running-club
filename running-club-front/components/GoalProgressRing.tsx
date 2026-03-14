@@ -13,6 +13,8 @@ interface Props {
   size?: number;
   /** 링 두께 (px). 기본 16. */
   strokeWidth?: number;
+  /** 목표 설정 버튼 클릭 핸들러 */
+  onSetGoal?: () => void;
 }
 
 /**
@@ -25,6 +27,7 @@ export default function GoalProgressRing({
   color = "#8B5CF6",
   size = 200,
   strokeWidth = 16,
+  onSetGoal,
 }: Props) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -108,9 +111,15 @@ export default function GoalProgressRing({
       ) : (
         <div className="text-center">
           <div className="text-xs text-white/40">목표 미설정</div>
-          <a href="/setup-account" className="text-xs mt-0.5 block" style={{ color }}>
-            목표 설정하기 →
-          </a>
+          {onSetGoal && (
+            <button
+              onClick={onSetGoal}
+              className="text-xs mt-0.5 block mx-auto hover:underline"
+              style={{ color }}
+            >
+              목표 설정하기 →
+            </button>
+          )}
         </div>
       )}
     </div>

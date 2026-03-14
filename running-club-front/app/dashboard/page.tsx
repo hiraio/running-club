@@ -3,38 +3,41 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { getMyDashboard } from "@/lib/api";
-import type { MemberDashboardData } from "@/lib/types";
+import { getMyDashboard, getGroupMembers } from "@/lib/api";
+import type { MemberDashboardData, GroupMemberDTO } from "@/lib/types";
 import WelcomeOverlay from "@/components/WelcomeOverlay";
 import GoalProgressRing from "@/components/GoalProgressRing";
+import ProfileEditModal from "@/components/ProfileEditModal";
 import { motion } from "framer-motion";
 import {
   Trophy, Calendar, Clock, TrendingUp, User, School,
-  BookOpen, Target, MapPin, Swords, ChevronRight,
+  BookOpen, Target, MapPin, Swords, ChevronRight, Pencil, Users,
 } from "lucide-react";
 
-/**
- * 개인 대시보드.
- * - 상단: 프로필 카드 (학교 / 전공 / bio)
- * - 중앙: NRC 스타일 목표 달성 원형 게이지
- * - 하단: 랭킹 · 최근 기록
- *
- * WelcomeOverlay는 AuthContext.showWelcome이 true일 때만 렌더링.
- * 오버레이가 재생되는 3초 동안 백그라운드에서 API 데이터를 로딩.
- */
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: authLoading, showWelcome, setShowWelcome } = useAuth();
   const [data, setData] = useState<MemberDashboardData | null>(null);
   const [apiLoading, setApiLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [groupMembers, setGroupMembers] = useState<GroupMemberDTO[]>([]);
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) { router.replace("/login"); return; }
 
     getMyDashboard()
-      .then(setData)
+      .then((d) => {
+        setData(d);
+        return d;
+      })
+      .then((d) => {
+        if (user?.groupId) {
+          getGroupMembers(user.groupId).then(setGroupMembers).catch(() => {});
+        }
+        return d;
+      })
       .catch((err) => {
         if (err.message === "UNAUTHORIZED") router.replace("/login");
         else setError("데이터를 불러오지 못했습니다.");
@@ -44,11 +47,9 @@ export default function DashboardPage() {
 
   const handleOverlayDone = () => setShowWelcome(false);
 
-  // 팀 포인트 컬러 결정
   const teamColor = data?.teamColorCode ?? user?.teamColorCode ?? "#8B5CF6";
   const teamColorLight = teamColor + "22";
 
-  // 로딩 중
   if (authLoading || apiLoading) {
     return (
       <>
@@ -83,8 +84,25 @@ export default function DashboardPage() {
 
   return (
     <>
-      {/* WelcomeOverlay — 대시보드 위에 3초 오버레이 */}
       {showWelcome && user && <WelcomeOverlay user={user} onDone={handleOverlayDone} />}
+
+      {data && (
+        <ProfileEditModal
+          open={showProfileModal}
+          initialData={{
+            school: data.school ?? null,
+            major: data.major ?? null,
+            bio: data.bio ?? null,
+            targetDistance: data.targetDistance ?? null,
+          }}
+          teamColor={teamColor}
+          onClose={() => setShowProfileModal(false)}
+          onSaved={() => {
+            setShowProfileModal(false);
+            getMyDashboard().then(setData).catch(() => {});
+          }}
+        />
+      )}
 
       <div className="min-h-screen bg-background pb-10">
         <div className="mx-auto max-w-2xl space-y-4 p-4 md:p-6">
@@ -97,7 +115,6 @@ export default function DashboardPage() {
             transition={{ duration: 0.5 }}
           >
             <div className="flex items-start gap-4">
-              {/* 아바타 */}
               <div
                 className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-lg font-black text-white shadow-lg"
                 style={{
@@ -108,7 +125,6 @@ export default function DashboardPage() {
                 {data.name.slice(0, 1)}
               </div>
 
-              {/* 이름 + 배지 */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-xl font-bold text-foreground">{data.name}</h2>
@@ -120,14 +136,15 @@ export default function DashboardPage() {
                       {data.teamName}
                     </span>
                   )}
-                  {data.groupName && (
-                    <span className="rounded-full bg-white/5 px-2.5 py-0.5 text-xs text-muted-foreground">
-                      {data.groupName}
-                    </span>
-                  )}
+                  <button
+                    onClick={() => setShowProfileModal(true)}
+                    className="ml-auto rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
+                    title="프로필 편집"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
                 </div>
 
-                {/* 학교 / 전공 */}
                 <div className="mt-1.5 flex flex-wrap gap-3 text-sm text-muted-foreground">
                   {data.school && (
                     <span className="flex items-center gap-1">
@@ -143,29 +160,27 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {/* 한 줄 자기소개 */}
                 {data.bio && (
                   <p className="mt-2 text-sm text-foreground/70 leading-snug">
                     &ldquo;{data.bio}&rdquo;
                   </p>
                 )}
 
-                {/* 프로필 미작성 안내 */}
                 {!data.school && !data.bio && (
-                  <a
-                    href="/setup-account"
-                    className="mt-2 inline-block text-xs"
+                  <button
+                    onClick={() => setShowProfileModal(true)}
+                    className="mt-2 inline-flex items-center text-xs hover:underline"
                     style={{ color: teamColor }}
                   >
-                    <User className="inline h-3 w-3 mr-1" />
+                    <User className="h-3 w-3 mr-1" />
                     프로필을 완성해보세요 →
-                  </a>
+                  </button>
                 )}
               </div>
             </div>
           </motion.div>
 
-          {/* ── 2. 팀 기여 카드 ───────────────────────────────────── */}
+          {/* ── 2. 팀 대항전 카드 (Team Battle) ────────────────────────── */}
           {data.teamName && (
             <motion.a
               href={data.competitionId ? "/competition" : undefined}
@@ -178,7 +193,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2">
                   <Swords className="h-4 w-4" style={{ color: teamColor }} />
                   <span className="text-sm font-bold text-foreground uppercase tracking-wider">
-                    Team Battle
+                    실시간 팀 대항전
                   </span>
                 </div>
                 {data.competitionId && (
@@ -190,7 +205,6 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-3 flex items-center gap-4">
-                {/* 팀 배지 */}
                 <div
                   className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-xs font-black text-white"
                   style={{ background: `linear-gradient(135deg, ${teamColor}, ${teamColor}88)` }}
@@ -218,20 +232,19 @@ export default function DashboardPage() {
                   </p>
                 </div>
 
-                {/* 내 기여 비율 */}
                 {data.teamTotalKm > 0 && (
                   <div className="text-right shrink-0">
                     <div className="text-sm font-bold text-foreground">
                       {((data.currentDistance / data.teamTotalKm) * 100).toFixed(1)}%
                     </div>
-                    <div className="text-[10px] text-muted-foreground">내 기여</div>
+                    <div className="text-[10px] text-muted-foreground">내 기여도</div>
                   </div>
                 )}
               </div>
             </motion.a>
           )}
 
-          {/* ── 3. 목표 달성 게이지 + 스탯 카드 ────────────────────── */}
+          {/* ── 3. 목표 달성 현황 (Goal Progress) ──────────────────────── */}
           <motion.div
             className="rounded-2xl border border-white/5 bg-card p-5 shadow-xl"
             initial={{ opacity: 0, y: 20 }}
@@ -241,39 +254,38 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2 mb-5">
               <Target className="h-4 w-4" style={{ color: teamColor }} />
               <h3 className="font-bold text-foreground text-sm uppercase tracking-wider">
-                Goal Progress
+                목표 달성 현황
               </h3>
             </div>
 
             <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:justify-around">
-              {/* 원형 게이지 */}
               <GoalProgressRing
                 current={data.currentDistance}
                 target={data.targetDistance}
                 color={teamColor}
                 size={180}
                 strokeWidth={14}
+                onSetGoal={() => setShowProfileModal(true)}
               />
 
-              {/* 통계 수치 */}
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-1 sm:gap-4 w-full sm:w-auto">
                 {[
                   {
                     icon: <TrendingUp className="h-4 w-4" />,
-                    label: "Total KM",
+                    label: "누적 거리",
                     value: data.currentDistance.toFixed(1),
                     unit: "km",
                   },
                   {
                     icon: <Calendar className="h-4 w-4" />,
-                    label: "Runs",
+                    label: "러닝 횟수",
                     value: String(data.totalRuns),
                     unit: "회",
                   },
                   {
                     icon: <Trophy className="h-4 w-4" />,
-                    label: "Rank",
-                    value: data.memberRank > 0 ? `#${data.memberRank}` : "-",
+                    label: "나의 순위",
+                    value: data.memberRank > 0 ? `${data.memberRank}위` : "-",
                     unit: data.totalRankedMembers > 0 ? `/ ${data.totalRankedMembers}` : "",
                   },
                 ].map((stat) => (
@@ -295,12 +307,11 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* 수평 진행 바 (목표 설정 시) */}
             {data.targetDistance && (
               <div className="mt-5">
                 <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                   <span>0 km</span>
-                  <span>{data.targetDistance} km</span>
+                  <span>목표 {data.targetDistance} km</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-white/5 overflow-hidden">
                   <motion.div
@@ -318,7 +329,77 @@ export default function DashboardPage() {
             )}
           </motion.div>
 
-          {/* ── 4. 최근 기록 ──────────────────────────────────────── */}
+          {/* ── 4. 내 조 멤버 ────────────────────────────────────────────── */}
+          {groupMembers.length > 0 && (
+            <motion.div
+              className="rounded-2xl border border-white/5 bg-card shadow-xl"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+            >
+              <div className="flex items-center gap-2 px-5 pt-5 pb-3">
+                <Users className="h-4 w-4" style={{ color: teamColor }} />
+                <h3 className="font-bold text-foreground text-sm uppercase tracking-wider">
+                  내 조 멤버
+                </h3>
+                {data.groupName && (
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[10px] font-semibold ml-1"
+                    style={{ background: teamColorLight, color: teamColor }}
+                  >
+                    {data.groupName}
+                  </span>
+                )}
+              </div>
+              <div className="px-5 pb-5 space-y-2">
+                {groupMembers.map((m, i) => {
+                  const isMe = m.memberId === user?.id;
+                  return (
+                    <button
+                      key={m.memberId}
+                      className={`w-full flex items-center justify-between rounded-xl border p-3 text-left transition-colors
+                        ${isMe
+                          ? "border-blue-500/30 bg-blue-500/[0.08] cursor-default"
+                          : "border-white/5 bg-white/[0.03] hover:bg-white/[0.06]"
+                        }`}
+                      onClick={() => { if (!isMe) router.push(`/members/${m.memberId}`); }}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-mono text-[11px] text-muted-foreground w-4 text-center shrink-0">
+                          {i + 1}
+                        </span>
+                        <div
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black text-white"
+                          style={{ background: `linear-gradient(135deg, ${teamColor}, ${teamColor}88)` }}
+                        >
+                          {m.name.slice(0, 1)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                            {m.name}
+                            {isMe && (
+                              <span className="text-[10px] font-black rounded-full px-1.5 py-0.5 bg-blue-500/20 text-blue-400 border border-blue-500/30">나</span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {m.totalRuns}회 · {m.memberRank > 0 ? `전체 ${m.memberRank}위` : "기록 없음"}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-sm font-bold" style={{ color: teamColor }}>
+                          {m.totalDistance.toFixed(1)}
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-1">km</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── 5. 최근 활동 기록 (Recent Activity) ────────────────────── */}
           <motion.div
             className="rounded-2xl border border-white/5 bg-card shadow-xl"
             initial={{ opacity: 0, y: 20 }}
@@ -328,7 +409,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2 px-5 pt-5 pb-3">
               <Calendar className="h-4 w-4" style={{ color: teamColor }} />
               <h3 className="font-bold text-foreground text-sm uppercase tracking-wider">
-                Recent Activity
+                최근 활동 기록
               </h3>
             </div>
 
@@ -350,7 +431,6 @@ export default function DashboardPage() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 + idx * 0.07 }}
                   >
-                    {/* 날짜 블록 */}
                     <div
                       className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl text-center"
                       style={{ background: teamColorLight }}
@@ -363,7 +443,6 @@ export default function DashboardPage() {
                       </span>
                     </div>
 
-                    {/* 정보 */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm font-semibold text-foreground">
@@ -387,12 +466,11 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    {/* 페이스 */}
                     <div className="text-right shrink-0">
                       <div className="text-xs font-bold text-foreground">
                         {(record.duration / 60 / record.distance).toFixed(1)}
                       </div>
-                      <div className="text-[10px] text-muted-foreground">min/km</div>
+                      <div className="text-[10px] text-muted-foreground">페이스(분/km)</div>
                     </div>
                   </motion.div>
                 ))

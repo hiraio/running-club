@@ -3,16 +3,33 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Trophy, ClipboardList, LayoutDashboard, LogOut, Swords, Bell } from "lucide-react";
+import { Trophy, ClipboardList, LayoutDashboard, LogOut, Swords, Bell, Home, MoreHorizontal } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { getNotices } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
+// 데스크탑 사이드바 전체 메뉴
 const navItems = [
-  { href: "/dashboard",   label: "대시보드",  icon: LayoutDashboard },
+  { href: "/",            label: "홈",         icon: Home },
+  { href: "/dashboard",   label: "마이페이지", icon: LayoutDashboard },
+  { href: "/competition", label: "대회 현황",  icon: Swords },
+  { href: "/records",     label: "내 기록",    icon: ClipboardList },
+  { href: "/ranking",     label: "랭킹",       icon: Trophy },
+  { href: "/notices",     label: "공지사항",   icon: Bell },
+];
+
+// 모바일 하단바 주요 4개
+const mainNavItems = [
+  { href: "/",          label: "홈",         icon: Home },
+  { href: "/ranking",   label: "랭킹",       icon: Trophy },
+  { href: "/records",   label: "내 기록",    icon: ClipboardList },
+  { href: "/dashboard", label: "마이페이지", icon: LayoutDashboard },
+];
+
+// 더보기 항목
+const moreNavItems = [
   { href: "/competition", label: "대회 현황", icon: Swords },
-  { href: "/records",     label: "내 기록",   icon: ClipboardList },
-  { href: "/ranking",     label: "랭킹",      icon: Trophy },
   { href: "/notices",     label: "공지사항",  icon: Bell },
 ];
 
@@ -21,6 +38,7 @@ export function UserSidebar() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const [hasNewNotice, setHasNewNotice] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   // 새 공지 여부: 마지막 방문 이후 생성된 공지가 있으면 dot 표시
   useEffect(() => {
@@ -37,9 +55,15 @@ export function UserSidebar() {
   }, [pathname]); // 페이지 이동 시마다 재확인
 
   const handleLogout = async () => {
+    setMoreOpen(false);
     await logout();
     router.push("/login");
   };
+
+  // 더보기에 속한 경로에 있을 때 더보기 버튼 활성화
+  const isMoreActive = moreNavItems.some(
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+  );
 
   return (
     <>
@@ -102,9 +126,8 @@ export function UserSidebar() {
 
       {/* ── 모바일: 하단 고정 네비게이션 ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border/50 flex">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {mainNavItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
-          const showDot = href === "/notices" && hasNewNotice && !active;
           return (
             <Link key={href} href={href} className="flex-1">
               <div
@@ -112,24 +135,76 @@ export function UserSidebar() {
                   active ? "text-primary" : "text-muted-foreground"
                 }`}
               >
-                <span className="relative">
-                  <Icon className="h-5 w-5" />
-                  {showDot && (
-                    <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-400 ring-2 ring-background" />
-                  )}
-                </span>
+                <Icon className="h-5 w-5" />
                 <span className="text-[10px] font-medium">{label}</span>
               </div>
             </Link>
           );
         })}
-        <button className="flex-1" onClick={handleLogout}>
-          <div className="flex flex-col items-center justify-center py-2 gap-0.5 text-muted-foreground hover:text-destructive">
-            <LogOut className="h-5 w-5" />
-            <span className="text-[10px] font-medium">로그아웃</span>
+
+        {/* 더보기 버튼 */}
+        <button className="flex-1" onClick={() => setMoreOpen(true)}>
+          <div
+            className={`flex flex-col items-center justify-center py-2 gap-0.5 ${
+              isMoreActive ? "text-primary" : "text-muted-foreground"
+            }`}
+          >
+            <span className="relative">
+              <MoreHorizontal className="h-5 w-5" />
+              {hasNewNotice && !pathname.startsWith("/notices") && (
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-400 ring-2 ring-background" />
+              )}
+            </span>
+            <span className="text-[10px] font-medium">더보기</span>
           </div>
         </button>
       </nav>
+
+      {/* ── 더보기 Bottom Sheet ── */}
+      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <SheetContent side="bottom" className="md:hidden bg-card rounded-t-2xl pb-10">
+          <SheetHeader className="mb-2">
+            <SheetTitle className="text-sm text-muted-foreground font-medium text-left">
+              더보기
+            </SheetTitle>
+          </SheetHeader>
+          <div className="space-y-1">
+            {moreNavItems.map(({ href, label, icon: Icon }) => {
+              const active = pathname === href || pathname.startsWith(href + "/");
+              const showDot = href === "/notices" && hasNewNotice && !active;
+              return (
+                <Link key={href} href={href} onClick={() => setMoreOpen(false)}>
+                  <Button
+                    variant="ghost"
+                    className={`w-full justify-start gap-3 h-12 text-base ${
+                      active
+                        ? "bg-primary/10 text-primary"
+                        : "text-foreground hover:text-primary hover:bg-primary/5"
+                    }`}
+                  >
+                    <span className="relative shrink-0">
+                      <Icon className="h-5 w-5" />
+                      {showDot && (
+                        <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-400 ring-2 ring-background" />
+                      )}
+                    </span>
+                    {label}
+                  </Button>
+                </Link>
+              );
+            })}
+            <div className="h-px bg-border/50 my-1" />
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 h-12 text-base text-destructive hover:text-destructive hover:bg-destructive/5"
+              onClick={handleLogout}
+            >
+              <LogOut className="h-5 w-5 shrink-0" />
+              로그아웃
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

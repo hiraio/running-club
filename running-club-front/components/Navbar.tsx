@@ -70,7 +70,7 @@ export function Navbar() {
     } finally {
       localStorage.removeItem("loggedIn");
       setIsLoggedIn(false);
-      router.push("/ranking");
+      router.push("/");
     }
   };
 
@@ -79,7 +79,7 @@ export function Navbar() {
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         {/* Left: Logo */}
         <Link
-          href="/ranking"
+          href="/"
           className="flex items-center gap-2 text-lg font-bold text-foreground transition-colors hover:text-primary"
         >
           <span className="text-xl">🏃</span>

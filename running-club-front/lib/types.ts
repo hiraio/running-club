@@ -166,6 +166,8 @@ export interface MemberDashboardData {
   competitionId: number | null;  // 진행 대회 없으면 null
   teamRank: number;              // 0 = 기록 없음
   teamTotalKm: number;
+  /** 오늘 러닝 여부 (APPROVED or WAITING 기록 있으면 true) */
+  ranToday: boolean;
   // 최근 기록
   recentRecords: RunningRecord[];
 }
@@ -181,8 +183,11 @@ export interface MemberDashboardData {
 export interface CompetitionBattle {
   competitionId: number;
   title: string;
+  status: "PROCEEDING" | "READY";
+  startDate: string;      // "yyyy-MM-dd"
   endDate: string;        // "yyyy-MM-dd"
   daysRemaining: number;  // 음수 = 대회 종료 후
+  daysUntilStart: number; // READY 상태: 시작까지 남은 일수
   teams: TeamBattleItem[];
   groupRankings: GroupContribution[];
   todayMvp: TodayMvp | null;
@@ -206,6 +211,9 @@ export interface GroupContribution {
   totalKm: number;
   recordCount: number;
   topContributor: boolean;
+  memberCount: number;
+  /** previousRank - currentRank. 양수=▲, 음수=▼, 0=변동없음, null=NEW */
+  rankChange: number | null;
 }
 
 export interface TodayMvp {
@@ -237,6 +245,8 @@ export interface RankingItem {
   name: string;
   totalDistance: number;
   recordCount: number;
+  /** previousRank - currentRank. 양수=▲, 음수=▼, 0=변동없음, null=NEW */
+  rankChange: number | null;
 }
 
 // ============================================================
@@ -417,4 +427,72 @@ export interface NoticeCreateRequest {
   title: string;
   content: string;
   isPinned: boolean;
+}
+
+// ============================================================
+// 멤버 공개 프로필 (GET /api/members/{id}/profile)
+// ============================================================
+
+/** 다른 회원의 읽기 전용 대시보드 데이터 */
+export interface MemberPublicProfileResponse {
+  memberId: number;
+  name: string;
+  teamName: string | null;
+  teamColorCode: string | null;
+  groupName: string | null;
+  school: string | null;
+  major: string | null;
+  bio: string | null;
+  targetDistance: number | null;
+  totalDistance: number;
+  totalRuns: number;
+  /** 전체 순위. 0 = 기록 없음 */
+  memberRank: number;
+  /** 최근 APPROVED 기록 최대 5건 (날짜 내림차순) */
+  recentRecords: RunningRecord[];
+}
+
+/** GET /api/groups/{id}/members 응답 배열의 각 항목 */
+export interface GroupMemberDTO {
+  memberId: number;
+  name: string;
+  totalDistance: number;
+  totalRuns: number;
+  /** 전체 순위. 0 = 기록 없음 */
+  memberRank: number;
+}
+
+// ============================================================
+// 활동 피드 (GET /api/records/recent)
+// ============================================================
+
+/** 피드 타임라인 개별 항목 */
+export interface FeedItem {
+  id: number;
+  userName: string;
+  teamName: string | null;
+  teamColorCode: string | null;
+  groupName: string | null;
+  distance: number;
+  duration: number;
+  runningDate: string;   // "YYYY-MM-DD"
+  createdAt: string;     // ISO datetime
+}
+
+/**
+ * 하이라이트 항목 (Daily King / Rising Star 공용).
+ * value: DailyKing → 오늘 km, RisingStar → 성장률 %
+ */
+export interface FeedHighlight {
+  userName: string;
+  teamName: string | null;
+  teamColorCode: string | null;
+  value: number;
+}
+
+/** GET /api/records/recent 응답 */
+export interface RecentFeedResponse {
+  records: FeedItem[];
+  dailyKing: FeedHighlight | null;
+  risingStar: FeedHighlight | null;
 }

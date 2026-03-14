@@ -8,7 +8,13 @@ import org.springframework.data.repository.query.Param;
 
 import com.running.club.domain.Member;
 
+import java.util.List;
+
 public interface MemberRepository extends JpaRepository<Member, Integer> {
+
+    /** 조별 멤버 수 집계. Object[0]=groupId(Integer), Object[1]=count(Long) */
+    @Query("SELECT m.runningGroup.id, COUNT(m) FROM Member m WHERE m.runningGroup IS NOT NULL GROUP BY m.runningGroup.id")
+    List<Object[]> countMembersPerGroup();
 
     @Query("SELECT m FROM Member m WHERE m.loginId = :loginId")
     Optional<Member> findByLoginId(@Param("loginId") String loginId);
@@ -21,4 +27,7 @@ public interface MemberRepository extends JpaRepository<Member, Integer> {
 
     @Query("SELECT m FROM Member m LEFT JOIN FETCH m.runningGroup LEFT JOIN FETCH m.team WHERE m.id = :id")
     Optional<Member> findByIdWithGroup(@Param("id") Integer id);
+
+    @Query("SELECT m FROM Member m LEFT JOIN FETCH m.runningGroup LEFT JOIN FETCH m.team WHERE m.runningGroup.id = :groupId")
+    List<Member> findByGroupId(@Param("groupId") Integer groupId);
 }

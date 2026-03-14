@@ -44,6 +44,9 @@ public class MemberDashboardResponse {
     /** 기록 있는 전체 멤버 수 */
     private int totalRankedMembers;
 
+    /** 오늘 러닝 여부 (APPROVED 또는 WAITING 기록이 있으면 true) */
+    private boolean ranToday;
+
     // ── 최근 기록 (최대 5건) ─────────────────────────────────────────
     private List<RunningRecordDTO> recentRecords;
 }

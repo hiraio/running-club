@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.running.club.domain.Competition;
 import com.running.club.domain.CompetitionForJoinDTO;
 import com.running.club.domain.CompetitionStatus;
+import com.running.club.domain.CompetitionSummaryDTO;
 import com.running.club.domain.GroupForJoinDTO;
 import com.running.club.domain.TeamForJoinDTO;
 import com.running.club.repository.CompetitionRepository;
@@ -33,6 +34,17 @@ public class PublicCompetitionService {
     private final CompetitionRepository competitionRepository;
     private final TeamRepository teamRepository;
     private final RunningGroupRepository runningGroupRepository;
+
+    // ════════════════════════════════════════════════════════════════
+    // GET /api/competitions  (전체 목록 — 상태 무관)
+    // ════════════════════════════════════════════════════════════════
+
+    public List<CompetitionSummaryDTO> getAllCompetitions() {
+        log.info("[PUBLIC-SVC] 대회 전체 목록 조회");
+        List<CompetitionSummaryDTO> result = competitionRepository.findAllWithTeamCount();
+        log.info("[PUBLIC-SVC] 대회 전체 목록 조회 완료 - 건수={}", result.size());
+        return result;
+    }
 
     // ════════════════════════════════════════════════════════════════
     // GET /api/competitions/active

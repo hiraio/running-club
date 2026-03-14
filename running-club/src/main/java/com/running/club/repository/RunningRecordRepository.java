@@ -176,6 +176,60 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
                                               @Param("today") LocalDate today,
                                               org.springframework.data.domain.Pageable pageable);
 
+    // ── 활동 피드 전용 쿼리 ──────────────────────────────────────────────────
+
+    /**
+     * 최신 APPROVED 기록 N건 (피드 타임라인용).
+     * createdAt DESC 정렬 — 가장 최근 승인 기록부터 반환.
+     * Pageable(0, 10) 으로 호출하면 최대 10건.
+     */
+    @Query("SELECT r FROM RunningRecord r " +
+           "JOIN FETCH r.member m " +
+           "LEFT JOIN FETCH m.team " +
+           "LEFT JOIN FETCH m.runningGroup " +
+           "WHERE r.status = 'APPROVED' " +
+           "ORDER BY r.createdAt DESC")
+    List<RunningRecord> findLatestApproved(org.springframework.data.domain.Pageable pageable);
+
+    /**
+     * Daily King 후보 — 오늘 APPROVED 기록 누적 거리 내림차순 (대회 무관 전체).
+     * Pageable(0, 1) 로 호출하면 1위만 반환.
+     */
+    @Query("SELECT new com.running.club.domain.TodayMvpDTO(" +
+           "m.id, m.name, t.teamName, t.colorCode, rg.groupName, SUM(r.distance)) " +
+           "FROM RunningRecord r " +
+           "JOIN r.member m " +
+           "LEFT JOIN m.team t " +
+           "LEFT JOIN m.runningGroup rg " +
+           "WHERE r.status = 'APPROVED' AND r.runningDate = :today " +
+           "GROUP BY m.id, m.name, t.teamName, t.colorCode, rg.groupName " +
+           "ORDER BY SUM(r.distance) DESC")
+    List<TodayMvpDTO> findDailyKingAll(@Param("today") LocalDate today,
+                                       org.springframework.data.domain.Pageable pageable);
+
+    /**
+     * 기간별 멤버 누적 거리 집계 (Rising Star 계산용).
+     * Object[] 컬럼 순서: [0]=memberId, [1]=name, [2]=teamName, [3]=colorCode, [4]=totalKm
+     * LEFT JOIN team → 팀 미배정 멤버도 포함 (t.id NULL 허용).
+     */
+    @Query("SELECT m.id, m.name, t.teamName, t.colorCode, SUM(r.distance) " +
+           "FROM RunningRecord r " +
+           "JOIN r.member m " +
+           "LEFT JOIN m.team t " +
+           "WHERE r.status = 'APPROVED' AND r.runningDate >= :from AND r.runningDate <= :to " +
+           "GROUP BY m.id, m.name, t.id, t.teamName, t.colorCode")
+    List<Object[]> findWeeklyDistancePerMember(@Param("from") LocalDate from,
+                                               @Param("to") LocalDate to);
+
+    /**
+     * 오늘 해당 멤버의 기록(APPROVED or WAITING) 존재 여부.
+     * WAITING 포함 — 제출 직후에도 "오늘 뛰었음"으로 처리.
+     */
+    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM RunningRecord r " +
+           "WHERE r.member.id = :memberId AND r.runningDate = :today " +
+           "AND r.status IN ('APPROVED', 'WAITING')")
+    boolean hasRunToday(@Param("memberId") Integer memberId, @Param("today") LocalDate today);
+
     @Modifying
     @Query("UPDATE RunningRecord r SET r.status = 'APPROVED', r.approvedBy = :admin, r.verifiedAt = :today WHERE r.id = :id AND r.status = 'WAITING'")
     int approve(@Param("id") Integer id, @Param("admin") Member admin, @Param("today") LocalDate today);

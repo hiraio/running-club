@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.running.club.domain.ApiResponse;
 import com.running.club.domain.CompetitionBattleResponse;
 import com.running.club.domain.CompetitionForJoinDTO;
+import com.running.club.domain.CompetitionSummaryDTO;
 import com.running.club.domain.GroupForJoinDTO;
 import com.running.club.domain.TeamForJoinDTO;
 import com.running.club.service.CompetitionBattleService;
@@ -33,6 +34,17 @@ public class CompetitionController {
 
     private final PublicCompetitionService   publicCompetitionService;
     private final CompetitionBattleService   competitionBattleService;
+
+    /**
+     * 전체 대회 목록 (상태 무관, 인증 불필요).
+     * 대회 목록 페이지에서 PROCEEDING/READY/FINISHED 모두 표시.
+     */
+    @GetMapping("/api/competitions")
+    public ResponseEntity<ApiResponse<List<CompetitionSummaryDTO>>> getAllCompetitions() {
+        log.info("[COMPETITION] 전체 대회 목록 조회 요청");
+        List<CompetitionSummaryDTO> result = publicCompetitionService.getAllCompetitions();
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
 
     /**
      * 대회 현황 배틀 데이터 (인증 불필요).

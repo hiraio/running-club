@@ -60,7 +60,7 @@ export default function NoticeDetailPage() {
           <Button
             variant="ghost"
             onClick={() => router.push("/notices")}
-            className="mb-6 gap-2 text-muted-foreground hover:text-foreground"
+            className="mb-6 gap-2 text-muted-foreground hover:text-foreground hidden md:inline-flex"
           >
             <ArrowLeft className="h-4 w-4" />
             목록으로
@@ -79,10 +79,11 @@ export default function NoticeDetailPage() {
       <div className="mx-auto max-w-2xl space-y-6">
 
         {/* ── 뒤로가기 ── */}
+        {/* 뒤로가기 — 데스크탑만 (모바일은 MobileTopBar에서 처리) */}
         <Button
           variant="ghost"
           onClick={() => router.push("/notices")}
-          className="gap-2 text-muted-foreground hover:text-foreground -ml-2"
+          className="gap-2 text-muted-foreground hover:text-foreground -ml-2 hidden md:inline-flex"
         >
           <ArrowLeft className="h-4 w-4" />
           목록으로
@@ -158,8 +159,8 @@ export default function NoticeDetailPage() {
           </div>
         </div>
 
-        {/* ── 하단 돌아가기 ── */}
-        <div className="flex justify-center pb-8">
+        {/* ── 하단 돌아가기 — 데스크탑만 ── */}
+        <div className="hidden md:flex justify-center pb-8">
           <Button
             variant="outline"
             onClick={() => router.push("/notices")}

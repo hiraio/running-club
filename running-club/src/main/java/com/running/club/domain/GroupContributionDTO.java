@@ -19,8 +19,15 @@ public class GroupContributionDTO {
     private Double  totalKm;
     private Long    recordCount;
     private boolean isTopContributor;
+    private Long    memberCount;
 
-    /** JPQL SELECT NEW 생성자 — rank/isTopContributor 제외 */
+    /**
+     * 순위 변동 = previousRank - currentRank.
+     * null = NEW (직전 스냅샷 없음).
+     */
+    private Integer rankChange;
+
+    /** JPQL SELECT NEW 생성자 — rank/isTopContributor/memberCount/rankChange 제외 */
     public GroupContributionDTO(Integer groupId, String groupName,
                                 Integer teamId, String teamName, String teamColorCode,
                                 Double totalKm, Long recordCount) {
@@ -35,4 +42,6 @@ public class GroupContributionDTO {
 
     public void setRank(Integer rank)               { this.rank = rank; }
     public void setTopContributor(boolean top)      { this.isTopContributor = top; }
+    public void setMemberCount(Long count)          { this.memberCount = count; }
+    public void setRankChange(Integer rankChange)   { this.rankChange = rankChange; }
 }

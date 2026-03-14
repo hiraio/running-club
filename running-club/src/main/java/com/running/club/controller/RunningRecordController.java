@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.running.club.domain.CustomUserDetails;
 import com.running.club.domain.Member;
+import com.running.club.domain.RecentFeedResponse;
 import com.running.club.domain.RunningRecord;
 import com.running.club.domain.RunningRecordDTO;
 import com.running.club.service.RunningRecordService;
@@ -65,6 +66,18 @@ public class RunningRecordController {
         log.info("[RECORD] 팀 기록 조회 요청 - teamId={}", teamId);
         List<RunningRecordDTO> result = runningRecordService.getRecordsByTeamId(teamId);
         log.info("[RECORD] 팀 기록 조회 완료 - teamId={}, 건수={}", teamId, result.size());
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 활동 피드 조회 (인증 불필요 — 홈 화면 공개 노출용).
+     * 최신 APPROVED 기록 10건 + Daily King + Rising Star 반환.
+     */
+    @GetMapping("/recent")
+    public ResponseEntity<RecentFeedResponse> getRecentFeed() {
+        log.info("[RECORD] 활동 피드 조회 요청");
+        RecentFeedResponse result = runningRecordService.getRecentFeed();
+        log.info("[RECORD] 활동 피드 조회 완료 - 피드{}건", result.getRecords().size());
         return ResponseEntity.ok(result);
     }
 

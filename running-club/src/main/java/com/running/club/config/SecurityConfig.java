@@ -32,7 +32,8 @@ public class SecurityConfig {
 	                    .requestMatchers("/api/auth/first-login", "/api/auth/login").permitAll()
 
 	                    // 3. 조회성 API는 인증 없이 허용
-	                    .requestMatchers("/api/records/team/**", "/api/records/group/**", "/api/ranking/**").permitAll()
+	                    .requestMatchers("/api/records/team/**", "/api/records/group/**",
+	                                     "/api/records/recent", "/api/ranking/**").permitAll()
 
 	                    // 3-1. 공지사항 공개 조회 (인증 불필요)
 	                    .requestMatchers("/api/notices/**").permitAll()

@@ -1,7 +1,10 @@
 package com.running.club.service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -11,9 +14,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.running.club.domain.Competition;
 import com.running.club.domain.Member;
+import com.running.club.domain.RecentFeedResponse;
 import com.running.club.domain.RunningRecord;
 import com.running.club.domain.RunningRecordDTO;
 import com.running.club.domain.Team;
+import com.running.club.domain.TodayMvpDTO;
 import com.running.club.repository.RunningGroupRepository;
 import com.running.club.repository.RunningRecordRepository;
 import com.running.club.repository.TeamRepository;
@@ -104,6 +109,97 @@ public class RunningRecordService {
                 .collect(Collectors.toList());
         log.info("[RECORD-SVC] 팀 기록 조회 완료 - teamId={}, 건수={}", teamId, result.size());
         return result;
+    }
+
+    /**
+     * 활동 피드 조회.
+     * - records    : 최신 APPROVED 기록 최대 10건
+     * - dailyKing  : 오늘 누적 거리 1위 (데이터 없으면 null)
+     * - risingStar : 이번 주 vs 지난 주 성장률 1위 (양쪽 기록 있는 멤버만 대상, 없으면 null)
+     */
+    public RecentFeedResponse getRecentFeed() {
+        log.info("[RECORD-SVC] 활동 피드 조회 시작");
+
+        // 1. 최신 피드 (최대 10건)
+        List<RunningRecord> latest = runningRecordRepository
+                .findLatestApproved(org.springframework.data.domain.PageRequest.of(0, 10));
+
+        List<RecentFeedResponse.FeedItem> feedItems = latest.stream()
+                .map(r -> RecentFeedResponse.FeedItem.builder()
+                        .id(r.getId())
+                        .userName(r.getMember().getName())
+                        .teamName(r.getMember().getTeam() != null ? r.getMember().getTeam().getTeamName() : null)
+                        .teamColorCode(r.getMember().getTeam() != null ? r.getMember().getTeam().getColorCode() : null)
+                        .groupName(r.getMember().getRunningGroup() != null ? r.getMember().getRunningGroup().getGroupName() : null)
+                        .distance(r.getDistance())
+                        .duration(r.getDuration())
+                        .runningDate(r.getRunningDate().toString())
+                        .createdAt(r.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
+
+        // 2. Daily King (오늘 누적 거리 1위, 대회 무관)
+        LocalDate today = LocalDate.now();
+        List<TodayMvpDTO> kingList = runningRecordRepository
+                .findDailyKingAll(today, org.springframework.data.domain.PageRequest.of(0, 1));
+
+        RecentFeedResponse.FeedHighlight dailyKing = kingList.isEmpty() ? null
+                : RecentFeedResponse.FeedHighlight.builder()
+                        .userName(kingList.get(0).getName())
+                        .teamName(kingList.get(0).getTeamName())
+                        .teamColorCode(kingList.get(0).getTeamColorCode())
+                        .value(kingList.get(0).getTodayKm())
+                        .build();
+
+        // 3. Rising Star (이번 주 vs 지난 주 성장률 1위)
+        LocalDate thisMonday  = today.with(DayOfWeek.MONDAY);
+        LocalDate lastMonday  = thisMonday.minusWeeks(1);
+        LocalDate lastSunday  = thisMonday.minusDays(1);
+
+        List<Object[]> thisWeekRows = runningRecordRepository.findWeeklyDistancePerMember(thisMonday, today);
+        List<Object[]> lastWeekRows = runningRecordRepository.findWeeklyDistancePerMember(lastMonday, lastSunday);
+
+        // lastWeek map: memberId → km
+        Map<Integer, Double> lastWeekMap = new HashMap<>();
+        for (Object[] row : lastWeekRows) {
+            Integer memberId = ((Number) row[0]).intValue();
+            double  km       = ((Number) row[4]).doubleValue();
+            lastWeekMap.put(memberId, km);
+        }
+
+        RecentFeedResponse.FeedHighlight risingStar = null;
+        double maxGrowth = Double.NEGATIVE_INFINITY;
+
+        for (Object[] row : thisWeekRows) {
+            Integer memberId  = ((Number) row[0]).intValue();
+            double  thisKm    = ((Number) row[4]).doubleValue();
+            Double  lastKm    = lastWeekMap.get(memberId);
+
+            // 지난 주 기록이 없거나 0이면 성장률 계산 불가 → 제외
+            if (lastKm == null || lastKm <= 0) continue;
+
+            double growth = (thisKm - lastKm) / lastKm * 100.0;
+            if (growth > maxGrowth) {
+                maxGrowth  = growth;
+                risingStar = RecentFeedResponse.FeedHighlight.builder()
+                        .userName((String) row[1])
+                        .teamName(row[2] != null ? (String) row[2] : null)
+                        .teamColorCode(row[3] != null ? (String) row[3] : null)
+                        .value(Math.round(growth * 10.0) / 10.0) // 소수점 1자리
+                        .build();
+            }
+        }
+
+        log.info("[RECORD-SVC] 활동 피드 조회 완료 - 피드{}건, dailyKing={}, risingStar={}",
+                feedItems.size(),
+                dailyKing != null ? dailyKing.getUserName() : "없음",
+                risingStar != null ? risingStar.getUserName() : "없음");
+
+        return RecentFeedResponse.builder()
+                .records(feedItems)
+                .dailyKing(dailyKing)
+                .risingStar(risingStar)
+                .build();
     }
 
     public List<RunningRecordDTO> getRecordsByGroupId(Integer groupId) {

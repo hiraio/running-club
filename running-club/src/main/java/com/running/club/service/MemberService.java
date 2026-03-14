@@ -1,6 +1,7 @@
 package com.running.club.service;
 
 import com.running.club.domain.*;
+import java.time.LocalDate;
 import com.running.club.repository.MemberProfileRepository;
 import com.running.club.repository.MemberRepository;
 import com.running.club.repository.RunningGroupRepository;
@@ -12,7 +13,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -72,6 +76,7 @@ public class MemberService {
 
         double currentDistance = runningRecordRepository.getTotalApprovedDistanceByMember(memberId);
         long totalRuns = runningRecordRepository.countApprovedByMember(memberId);
+        boolean ranToday = runningRecordRepository.hasRunToday(memberId, LocalDate.now());
 
         // 최근 5건 (날짜 내림차순)
         List<RunningRecord> recent = runningRecordRepository.findRecentApproved(memberId, PageRequest.of(0, 5));
@@ -125,8 +130,88 @@ public class MemberService {
                 .competitionId(competitionId)
                 .teamRank(teamRank)
                 .teamTotalKm(teamTotalKm)
+                .ranToday(ranToday)
                 .recentRecords(recentDTOs)
                 .build();
+    }
+
+    /**
+     * 다른 회원의 공개 프로필 조회 (읽기 전용 대시보드).
+     * rank는 전체 getMemberRanking() 결과에서 찾아서 주입 — 별도 집계 쿼리 없음.
+     */
+    public MemberPublicProfileResponse getPublicProfile(Integer targetId) {
+        log.info("[PUBLIC_PROFILE] 공개 프로필 조회 - targetId={}", targetId);
+        Member member = memberRepository.findByIdWithGroup(targetId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. (id=" + targetId + ")"));
+
+        MemberProfile profile = memberProfileRepository.findByMemberId(targetId).orElse(null);
+
+        double totalDistance = runningRecordRepository.getTotalApprovedDistanceByMember(targetId);
+        long totalRuns = runningRecordRepository.countApprovedByMember(targetId);
+
+        // 전체 랭킹에서 순위만 추출 (별도 집계 쿼리 없이 재사용)
+        List<RankingDTO> allRanks = runningRecordRepository.getMemberRanking();
+        for (int i = 0; i < allRanks.size(); i++) allRanks.get(i).setRank(i + 1);
+        int rank = allRanks.stream()
+                .filter(r -> r.getEntityId().equals(targetId))
+                .findFirst().map(RankingDTO::getRank).orElse(0);
+
+        // 최근 5건 (날짜 내림차순)
+        List<RunningRecord> recent = runningRecordRepository.findRecentApproved(targetId, PageRequest.of(0, 5));
+        List<RunningRecordDTO> recentDTOs = recent.stream().map(RunningRecordDTO::from).toList();
+
+        log.info("[PUBLIC_PROFILE] 조회 완료 - targetId={}, km={}, rank={}", targetId, totalDistance, rank);
+
+        return MemberPublicProfileResponse.builder()
+                .memberId(targetId)
+                .name(member.getName())
+                .teamName(member.getTeam() != null ? member.getTeam().getTeamName() : null)
+                .teamColorCode(member.getTeam() != null ? member.getTeam().getColorCode() : null)
+                .groupName(member.getRunningGroup() != null ? member.getRunningGroup().getGroupName() : null)
+                .school(profile != null ? profile.getSchool() : null)
+                .major(profile != null ? profile.getMajor() : null)
+                .bio(profile != null ? profile.getBio() : null)
+                .targetDistance(profile != null ? profile.getTargetDistance() : null)
+                .totalDistance(totalDistance)
+                .totalRuns(totalRuns)
+                .memberRank(rank)
+                .recentRecords(recentDTOs)
+                .build();
+    }
+
+    /**
+     * 조 전체 멤버 목록 + 각자의 달리기 통계.
+     * 전체 랭킹 한 번만 조회 후 Map으로 변환해 N+1 방지.
+     */
+    public List<GroupMemberDTO> getGroupMembers(Integer groupId) {
+        log.info("[GROUP_MEMBERS] 조 멤버 목록 조회 - groupId={}", groupId);
+        runningGroupRepository.findByGroupId(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 조입니다. (id=" + groupId + ")"));
+
+        List<Member> members = memberRepository.findByGroupId(groupId);
+
+        // 전체 랭킹 한 번만 조회 → Map<memberId, RankingDTO>
+        List<RankingDTO> allRanks = runningRecordRepository.getMemberRanking();
+        for (int i = 0; i < allRanks.size(); i++) allRanks.get(i).setRank(i + 1);
+        Map<Integer, RankingDTO> rankMap = allRanks.stream()
+                .collect(Collectors.toMap(RankingDTO::getEntityId, r -> r));
+
+        List<GroupMemberDTO> result = members.stream()
+                .map(m -> {
+                    RankingDTO r = rankMap.get(m.getId());
+                    return GroupMemberDTO.builder()
+                            .memberId(m.getId())
+                            .name(m.getName())
+                            .totalDistance(r != null ? r.getTotalDistance() : 0.0)
+                            .totalRuns(r != null ? r.getRecordCount() : 0L)
+                            .memberRank(r != null ? r.getRank() : 0)
+                            .build();
+                })
+                .sorted(Comparator.comparingDouble(GroupMemberDTO::getTotalDistance).reversed())
+                .collect(Collectors.toList());
+
+        log.info("[GROUP_MEMBERS] 조회 완료 - groupId={}, count={}", groupId, result.size());
+        return result;
     }
 
     @Transactional

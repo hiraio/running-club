@@ -52,10 +52,15 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        if (!initTestData) return;
+        // 스키마 패치는 항상 실행 (ddl-auto=update 로 처리 안 되는 컬럼 제약 변경)
+        fixSchema();
+
+        if (!initTestData) {
+            log.info("[DATA-INIT] app.init-test-data=false — 데이터 초기화 건너뜀 (기존 데이터 유지)");
+            return;
+        }
 
         log.info("[DATA-INIT] ====== 테스트 데이터 초기화 시작 ======");
-        fixSchema();
         clearAll();
         insertAll();
         log.info("[DATA-INIT] ====== 테스트 데이터 초기화 완료 ======");

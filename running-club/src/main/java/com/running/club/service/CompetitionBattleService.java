@@ -2,6 +2,7 @@ package com.running.club.service;
 
 import com.running.club.domain.*;
 import com.running.club.repository.CompetitionRepository;
+import com.running.club.repository.MemberRepository;
 import com.running.club.repository.RunningRecordRepository;
 import com.running.club.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,8 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -24,6 +27,8 @@ public class CompetitionBattleService {
     private final CompetitionRepository    competitionRepository;
     private final RunningRecordRepository  runningRecordRepository;
     private final TeamRepository           teamRepository;
+    private final MemberRepository         memberRepository;
+    private final RankSnapshotService      rankSnapshotService;
 
     /**
      * 현재 활성 대회의 배틀 현황을 한 번에 반환.
@@ -59,23 +64,43 @@ public class CompetitionBattleService {
             groups.get(i).setTopContributor(i == 0);
         }
 
+        // 조별 멤버 수 병합 (기록 없는 조 포함 전체 인원)
+        Map<Integer, Long> memberCountMap = memberRepository.countMembersPerGroup().stream()
+                .collect(Collectors.toMap(arr -> (Integer) arr[0], arr -> (Long) arr[1]));
+        groups.forEach(g -> g.setMemberCount(memberCountMap.getOrDefault(g.getGroupId(), 0L)));
+
+        // 조별 순위 변동 병합 (직전 스냅샷 기준)
+        Map<Integer, Integer> prevGroupRanks = rankSnapshotService.getLatestRanks("GROUP", competition.getId());
+        groups.forEach(g -> {
+            Integer prev = prevGroupRanks.get(g.getGroupId());
+            if (prev != null) g.setRankChange(prev - g.getRank());
+        });
+
         // 4. 오늘의 MVP (당일 APPROVED 누적 최대)
         List<TodayMvpDTO> mvpList = runningRecordRepository.findTodayMvpCandidates(
                 competition.getId(), LocalDate.now(), PageRequest.of(0, 1));
         TodayMvpDTO todayMvp = mvpList.isEmpty() ? null : mvpList.get(0);
 
-        // 5. D-Day 계산
-        long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), competition.getEndDate());
+        // 5. 상태 및 D-Day 계산
+        CompetitionStatus status = CompetitionStatus.of(
+                competition.getStartDate(), competition.getEndDate(), competition.getIsActive());
+        long daysRemaining  = ChronoUnit.DAYS.between(LocalDate.now(), competition.getEndDate());
+        long daysUntilStart = status == CompetitionStatus.READY
+                ? ChronoUnit.DAYS.between(LocalDate.now(), competition.getStartDate())
+                : 0L;
 
-        log.info("[BATTLE] 조회 완료 - teams={}, groups={}, mvp={}, daysRemaining={}",
-                teams.size(), groups.size(),
-                todayMvp != null ? todayMvp.getName() : "없음", daysRemaining);
+        log.info("[BATTLE] 조회 완료 - status={}, teams={}, groups={}, mvp={}, daysRemaining={}, daysUntilStart={}",
+                status, teams.size(), groups.size(),
+                todayMvp != null ? todayMvp.getName() : "없음", daysRemaining, daysUntilStart);
 
         return CompetitionBattleResponse.builder()
                 .competitionId(competition.getId())
                 .title(competition.getTitle())
+                .status(status.name())
+                .startDate(competition.getStartDate().toString())
                 .endDate(competition.getEndDate().toString())
                 .daysRemaining(daysRemaining)
+                .daysUntilStart(daysUntilStart)
                 .teams(teams)
                 .groupRankings(groups)
                 .todayMvp(todayMvp)

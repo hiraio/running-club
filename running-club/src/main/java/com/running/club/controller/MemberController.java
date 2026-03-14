@@ -115,6 +115,30 @@ public class MemberController {
         return ResponseEntity.ok(MemberProfileResponse.from(profile));
     }
 
+    /**
+     * 다른 회원의 공개 프로필 조회 (로그인 필요).
+     * GET /api/members/{id}/profile
+     */
+    @GetMapping("/api/members/{id}/profile")
+    public ResponseEntity<ApiResponse<MemberPublicProfileResponse>> getMemberProfile(
+            @PathVariable Integer id) {
+        log.info("[PUBLIC_PROFILE] 공개 프로필 요청 - targetId={}", id);
+        MemberPublicProfileResponse response = memberService.getPublicProfile(id);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    /**
+     * 조 전체 멤버 목록 + 통계 (로그인 필요).
+     * GET /api/groups/{id}/members
+     */
+    @GetMapping("/api/groups/{id}/members")
+    public ResponseEntity<ApiResponse<java.util.List<GroupMemberDTO>>> getGroupMembers(
+            @PathVariable Integer id) {
+        log.info("[GROUP_MEMBERS] 조 멤버 목록 요청 - groupId={}", id);
+        java.util.List<GroupMemberDTO> response = memberService.getGroupMembers(id);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
     @GetMapping("/login")
     public String loginPage() {
         return "로그인 페이지입니다. POST로 아이디와 비번을 보내주세요.";
