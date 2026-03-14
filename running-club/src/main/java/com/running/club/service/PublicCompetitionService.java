@@ -72,6 +72,27 @@ public class PublicCompetitionService {
     }
 
     // ════════════════════════════════════════════════════════════════
+    // GET /api/competitions/{id}/groups
+    // ════════════════════════════════════════════════════════════════
+
+    /** 대회 전체 조 목록 (팀명 포함) — 회원가입 시 조 선택 단계 */
+    public List<GroupForJoinDTO> getGroupsByCompetition(Integer competitionId) {
+        log.info("[PUBLIC-SVC] 대회 조 목록 조회 - competitionId={}", competitionId);
+        Competition competition = competitionRepository.findByCompetitionId(competitionId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 대회입니다. (id=" + competitionId + ")"));
+
+        CompetitionStatus status = CompetitionStatus.of(
+                competition.getStartDate(), competition.getEndDate(), competition.getIsActive());
+        if (status == CompetitionStatus.FINISHED) {
+            throw new IllegalStateException("종료된 대회입니다. (id=" + competitionId + ")");
+        }
+
+        List<GroupForJoinDTO> result = runningGroupRepository.findGroupsByCompetitionId(competitionId);
+        log.info("[PUBLIC-SVC] 대회 조 목록 조회 완료 - competitionId={}, 건수={}", competitionId, result.size());
+        return result;
+    }
+
+    // ════════════════════════════════════════════════════════════════
     // GET /api/teams/{id}/groups
     // ════════════════════════════════════════════════════════════════
 

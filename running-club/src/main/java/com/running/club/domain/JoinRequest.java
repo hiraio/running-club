@@ -6,8 +6,8 @@ import lombok.Setter;
 /**
  * POST /join 요청 바디 DTO.
  *
- * <p>teamId는 필수 — 회원가입 시 반드시 팀을 선택해야 함.
- * groupId는 선택 — 조를 운영하지 않는 팀이거나 아직 조가 구성되지 않은 경우 null 허용.
+ * <p>groupId(조 ID)를 선택하면 팀은 자동으로 결정됨.
+ * teamId는 더 이상 받지 않음 — 조 → 팀 → 대회 계층으로 자동 도출.
  */
 @Getter
 @Setter
@@ -17,9 +17,6 @@ public class JoinRequest {
     private String password;
     private String name;
 
-    /** 소속 팀 ID (필수). 활성 대회 소속 팀만 유효. */
-    private Integer teamId;
-
-    /** 소속 조 ID (선택). null 허용 — 조 미배정 상태로 가입 가능. */
+    /** 소속 조 ID (필수). 조 → 팀 → 대회 자동 도출. */
     private Integer groupId;
 }

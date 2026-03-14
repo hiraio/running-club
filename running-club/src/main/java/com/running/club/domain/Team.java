@@ -28,10 +28,6 @@ public class Team {
     @Column(name = "color_code")
     private String colorCode;
 
-    @Builder.Default
-    @Column(name = "total_km")
-    private Double totalKm = 0.0;
-
     @OneToMany(mappedBy = "team")
     @Builder.Default
     private List<Member> members = new ArrayList<>();

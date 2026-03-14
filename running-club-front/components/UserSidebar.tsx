@@ -1,21 +1,40 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Trophy, ClipboardList, LayoutDashboard, LogOut } from "lucide-react";
+import { Trophy, ClipboardList, LayoutDashboard, LogOut, Swords, Bell } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { getNotices } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
-  { href: "/records", label: "내 기록", icon: ClipboardList },
-  { href: "/ranking", label: "랭킹", icon: Trophy },
+  { href: "/dashboard",   label: "대시보드",  icon: LayoutDashboard },
+  { href: "/competition", label: "대회 현황", icon: Swords },
+  { href: "/records",     label: "내 기록",   icon: ClipboardList },
+  { href: "/ranking",     label: "랭킹",      icon: Trophy },
+  { href: "/notices",     label: "공지사항",  icon: Bell },
 ];
 
 export function UserSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const [hasNewNotice, setHasNewNotice] = useState(false);
+
+  // 새 공지 여부: 마지막 방문 이후 생성된 공지가 있으면 dot 표시
+  useEffect(() => {
+    const checkNew = async () => {
+      try {
+        const notices = await getNotices();
+        if (notices.length === 0) return;
+        const lastSeen = localStorage.getItem("noticesLastSeen");
+        if (!lastSeen) { setHasNewNotice(true); return; }
+        setHasNewNotice(notices.some((n) => new Date(n.createdAt) > new Date(lastSeen)));
+      } catch { /* 무시 */ }
+    };
+    checkNew();
+  }, [pathname]); // 페이지 이동 시마다 재확인
 
   const handleLogout = async () => {
     await logout();
@@ -44,6 +63,7 @@ export function UserSidebar() {
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
+            const showDot = href === "/notices" && hasNewNotice && !active;
             return (
               <Link key={href} href={href}>
                 <Button
@@ -54,7 +74,12 @@ export function UserSidebar() {
                       : "text-muted-foreground hover:text-primary hover:bg-primary/5"
                   }`}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="relative shrink-0">
+                    <Icon className="h-4 w-4" />
+                    {showDot && (
+                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-400 ring-2 ring-background" />
+                    )}
+                  </span>
                   {label}
                 </Button>
               </Link>
@@ -79,6 +104,7 @@ export function UserSidebar() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border/50 flex">
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
+          const showDot = href === "/notices" && hasNewNotice && !active;
           return (
             <Link key={href} href={href} className="flex-1">
               <div
@@ -86,7 +112,12 @@ export function UserSidebar() {
                   active ? "text-primary" : "text-muted-foreground"
                 }`}
               >
-                <Icon className="h-5 w-5" />
+                <span className="relative">
+                  <Icon className="h-5 w-5" />
+                  {showDot && (
+                    <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-400 ring-2 ring-background" />
+                  )}
+                </span>
                 <span className="text-[10px] font-medium">{label}</span>
               </div>
             </Link>

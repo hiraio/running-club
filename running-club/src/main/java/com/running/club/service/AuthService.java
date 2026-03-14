@@ -6,6 +6,7 @@ import com.running.club.domain.MeResponse;
 import com.running.club.repository.MemberRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -43,6 +44,12 @@ public class AuthService {
                     log.warn("[AUTH] 최초 로그인 실패 - 이름/전화번호 불일치 name={}", name);
                     return new IllegalArgumentException("이름 또는 전화번호가 올바르지 않습니다.");
                 });
+
+        // isInitialLogin 검증: loginId가 이미 존재하면 일반 로그인으로 유도
+        if (member.getLoginId() != null) {
+            log.warn("[AUTH] 최초 로그인 차단 - 이미 계정 설정된 회원 name={}, loginId={}", name, member.getLoginId());
+            throw new IllegalStateException("ALREADY_REGISTERED");
+        }
 
         // 세션에 SecurityContext 저장
         CustomUserDetails userDetails = new CustomUserDetails(member);
@@ -113,6 +120,9 @@ public class AuthService {
                 .needsSetup(member.needsSetup())
                 .groupId(member.getRunningGroup() != null ? member.getRunningGroup().getId() : null)
                 .groupName(member.getRunningGroup() != null ? member.getRunningGroup().getGroupName() : null)
+                .teamId(member.getTeam() != null ? member.getTeam().getId() : null)
+                .teamName(member.getTeam() != null ? member.getTeam().getTeamName() : null)
+                .teamColorCode(member.getTeam() != null ? member.getTeam().getColorCode() : null)
                 .build();
     }
 }

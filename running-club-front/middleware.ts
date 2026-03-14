@@ -14,8 +14,8 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // /dashboard, /records → 로그인 필요, ADMIN이면 /admin으로
-  if (pathname === "/dashboard" || pathname.startsWith("/records")) {
+  // /dashboard, /records, /competition → 로그인 필요, ADMIN이면 /admin으로
+  if (pathname === "/dashboard" || pathname.startsWith("/records") || pathname === "/competition") {
     if (!role) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
@@ -41,5 +41,6 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/dashboard", "/records/:path*", "/login", "/setup-account"],
+  // /notices 는 matcher에서 의도적으로 제외 — 인증 없이 누구나 접근 가능
+  matcher: ["/admin/:path*", "/dashboard", "/competition", "/records/:path*", "/login", "/setup-account"],
 };

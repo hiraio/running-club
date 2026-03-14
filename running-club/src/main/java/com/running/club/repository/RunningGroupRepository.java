@@ -34,6 +34,16 @@ public interface RunningGroupRepository extends JpaRepository<RunningGroup, Inte
     List<GroupForJoinDTO> findGroupsForJoin(@Param("teamId") Integer teamId);
 
     /**
+     * 대회 ID로 소속 전체 조 목록 조회 (팀 정보 포함).
+     * 회원가입 시 대회 선택 → 조 선택 단계에서 사용.
+     */
+    @Query("SELECT new com.running.club.domain.GroupForJoinDTO(g.id, g.groupName, g.team.id, g.team.teamName) " +
+           "FROM RunningGroup g JOIN g.team t JOIN t.competition c " +
+           "WHERE c.id = :competitionId " +
+           "ORDER BY t.id ASC, g.id ASC")
+    List<GroupForJoinDTO> findGroupsByCompetitionId(@Param("competitionId") Integer competitionId);
+
+    /**
      * 그룹 삭제 전 소속 멤버 수 확인.
      * Member.runningGroup FK 기준 카운트.
      */

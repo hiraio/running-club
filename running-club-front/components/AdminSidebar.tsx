@@ -7,6 +7,7 @@ import {
   Trophy,
   ShieldCheck,
   LogOut,
+  Bell,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ const navItems = [
   { href: "/admin", label: "관리자 홈", icon: ShieldCheck, exact: true },
   { href: "/admin/approvals", label: "기록 승인", icon: ClipboardCheck },
   { href: "/admin/competitions", label: "대회 관리", icon: Trophy },
+  { href: "/admin/notices", label: "공지사항", icon: Bell },
 ];
 
 export function AdminSidebar() {

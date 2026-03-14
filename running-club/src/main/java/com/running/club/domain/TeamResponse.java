@@ -15,7 +15,6 @@ public class TeamResponse {
     private Integer competitionId;
     private String teamName;
     private String colorCode;
-    private Double totalKm;
 
     public static TeamResponse from(Team team) {
         return TeamResponse.builder()
@@ -23,7 +22,6 @@ public class TeamResponse {
                 .competitionId(team.getCompetition().getId())
                 .teamName(team.getTeamName())
                 .colorCode(team.getColorCode())
-                .totalKm(team.getTotalKm())
                 .build();
     }
 }

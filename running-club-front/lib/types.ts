@@ -61,12 +61,14 @@ export interface TeamForJoin {
 }
 
 /**
- * GET /api/teams/{id}/groups 응답 data 배열의 각 항목.
- * 빈 배열 = 조 미구성. 에러가 아니므로 프론트에서 "조 없음" UI로 처리.
+ * GET /api/competitions/{id}/groups 응답 data 배열의 각 항목.
+ * teamId / teamName: 대회 전체 조 목록 조회 시 팀 컨텍스트 포함.
  */
 export interface GroupForJoin {
   id: number;
   groupName: string;
+  teamId: number | null;
+  teamName: string | null;
 }
 
 // ============================================================
@@ -79,22 +81,49 @@ export interface AuthUser {
   loginId: string | null; // 계정 설정 전 VIP 사용자는 null
   name: string;
   role: "USER" | "ADMIN";
-  needsSetup: boolean;    // true이면 /setup-account로 리다이렉트 필요
+  needsSetup: boolean;       // true이면 /setup-account로 리다이렉트 필요
   groupId: number | null;
   groupName: string | null;
+  teamId: number | null;     // WelcomeOverlay 팀 테마용
+  teamName: string | null;
+  teamColorCode: string | null; // 예: "#3B82F6"
+}
+
+/**
+ * GET /api/me/profile 응답.
+ * 미작성 시 memberId만 있고 나머지 null.
+ */
+export interface MemberProfile {
+  memberId: number;
+  school: string | null;
+  major: string | null;
+  bio: string | null;
+  targetDistance: number | null;
+  profileImageUrl: string | null;
+}
+
+/** PUT /api/me/profile 요청 바디 — 모든 필드 선택 사항 */
+export interface MemberProfileRequest {
+  school?: string;
+  major?: string;
+  bio?: string;
+  targetDistance?: number;
+  profileImageUrl?: string;
 }
 
 // ============================================================
 // 인증
 // ============================================================
 
-/** POST /join 요청 바디 (application/json) */
+/**
+ * POST /join 요청 바디 (application/json).
+ * groupId(조)를 선택하면 팀·대회는 서버에서 자동 도출.
+ */
 export interface JoinRequest {
   loginId: string;
   password: string;
   name: string;
-  teamId: number;
-  groupId?: number; // 선택 — 생략 또는 undefined 전송 시 조 미배정으로 가입
+  groupId: number; // 필수 — 조 선택으로 팀/대회 자동 결정
 }
 
 /**
@@ -107,6 +136,85 @@ export interface JoinResponse {
   name: string;
   teamName: string;
   groupName: string | null;
+}
+
+// ============================================================
+// 개인 대시보드 (인증 필요)
+// ============================================================
+
+/**
+ * GET /api/me/dashboard 응답.
+ * 프로필 + 러닝 통계 + 최근 기록을 한 번에 반환.
+ */
+export interface MemberDashboardData {
+  memberId: number;
+  name: string;
+  teamName: string | null;
+  teamColorCode: string | null;
+  groupName: string | null;
+  // 프로필
+  school: string | null;
+  major: string | null;
+  bio: string | null;
+  targetDistance: number | null;
+  // 통계
+  currentDistance: number;
+  totalRuns: number;
+  memberRank: number;        // 0 = 기록 없음
+  totalRankedMembers: number;
+  // 팀 현황 (대시보드 팀 기여 카드)
+  competitionId: number | null;  // 진행 대회 없으면 null
+  teamRank: number;              // 0 = 기록 없음
+  teamTotalKm: number;
+  // 최근 기록
+  recentRecords: RunningRecord[];
+}
+
+// ============================================================
+// 대회 현황 배틀 (공개 API)
+// ============================================================
+
+/**
+ * GET /api/competitions/active/battle 응답.
+ * 팀 배틀 + 조별 기여도 + 오늘의 MVP를 단일 호출로 반환.
+ */
+export interface CompetitionBattle {
+  competitionId: number;
+  title: string;
+  endDate: string;        // "yyyy-MM-dd"
+  daysRemaining: number;  // 음수 = 대회 종료 후
+  teams: TeamBattleItem[];
+  groupRankings: GroupContribution[];
+  todayMvp: TodayMvp | null;
+}
+
+export interface TeamBattleItem {
+  id: number;
+  teamName: string;
+  colorCode: string | null;
+  totalKm: number;
+  groupCount: number;
+}
+
+export interface GroupContribution {
+  rank: number;
+  groupId: number;
+  groupName: string;
+  teamId: number;
+  teamName: string;
+  teamColorCode: string | null;
+  totalKm: number;
+  recordCount: number;
+  topContributor: boolean;
+}
+
+export interface TodayMvp {
+  memberId: number;
+  name: string;
+  teamName: string | null;
+  teamColorCode: string | null;
+  groupName: string | null;
+  todayKm: number;
 }
 
 // ============================================================
@@ -238,7 +346,6 @@ export interface TeamDetail {
   competitionId: number;
   teamName: string;
   colorCode: string | null;
-  totalKm: number;
 }
 
 /** POST /api/admin/competitions/{id}/teams 요청 바디 */
@@ -281,4 +388,33 @@ export interface GroupCreateRequest {
 /** PATCH /api/admin/groups/{id} 요청 바디 */
 export interface GroupUpdateRequest {
   groupName: string;
+}
+
+// ============================================================
+// 공지사항
+// ============================================================
+
+/** GET /api/notices 목록 항목 (content 제외 경량 DTO) */
+export interface NoticeSummary {
+  id: number;
+  title: string;
+  isPinned: boolean;
+  createdAt: string; // ISO datetime
+}
+
+/** GET /api/notices/{id} 단건 */
+export interface NoticeDetail {
+  id: number;
+  title: string;
+  content: string;
+  isPinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** POST /api/admin/notices 요청 바디 */
+export interface NoticeCreateRequest {
+  title: string;
+  content: string;
+  isPinned: boolean;
 }

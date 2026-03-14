@@ -24,14 +24,18 @@ public interface TeamRepository extends JpaRepository<Team, Integer> {
     List<TeamForJoinDTO> findTeamsForJoin(@Param("competitionId") Integer competitionId);
 
     /**
-     * 대회 내 팀 목록 + 소속 조 수 집계.
-     * LEFT JOIN으로 그룹 없는 팀도 포함, COUNT로 N+1 차단.
+     * 대회 내 팀 목록 + 소속 조 수 + 실시간 누적 거리 집계.
+     * total_km 컬럼 폐기 → running_records의 APPROVED 기록을 서브쿼리 SUM으로 계산.
+     * 서브쿼리로 팀별 누적 거리를 계산 — 항상 실제 데이터와 일치.
      */
     @Query("SELECT new com.running.club.domain.TeamSummaryDTO(" +
-           "t.id, t.teamName, t.colorCode, t.totalKm, COUNT(g)) " +
+           "t.id, t.teamName, t.colorCode, " +
+           "COALESCE((SELECT SUM(r2.distance) FROM RunningRecord r2 JOIN r2.member m2 " +
+           "          WHERE m2.team = t AND r2.status = 'APPROVED'), 0.0), " +
+           "COUNT(DISTINCT g)) " +
            "FROM Team t LEFT JOIN t.groups g " +
            "WHERE t.competition.id = :competitionId " +
-           "GROUP BY t.id, t.teamName, t.colorCode, t.totalKm " +
+           "GROUP BY t.id, t.teamName, t.colorCode " +
            "ORDER BY t.id ASC")
     List<TeamSummaryDTO> findAllByCompetitionIdWithGroupCount(@Param("competitionId") Integer competitionId);
 

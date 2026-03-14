@@ -3,6 +3,7 @@ package com.running.club.config;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -21,6 +22,9 @@ public class SecurityConfig {
 	    http.csrf(csrf -> csrf.disable())
 	            .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
 	            .authorizeHttpRequests(auth -> auth
+	                    // 0. CORS 프리플라이트(OPTIONS)는 인증 없이 항상 허용
+	                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
 	                    // 1. 누구나 접근 가능한 경로
 	                    .requestMatchers("/h2-console/**", "/join", "/login", "/css/**", "/js/**", "/photos/**").permitAll()
 
@@ -29,6 +33,9 @@ public class SecurityConfig {
 
 	                    // 3. 조회성 API는 인증 없이 허용
 	                    .requestMatchers("/api/records/team/**", "/api/records/group/**", "/api/ranking/**").permitAll()
+
+	                    // 3-1. 공지사항 공개 조회 (인증 불필요)
+	                    .requestMatchers("/api/notices/**").permitAll()
 
 	                    // 4. 회원가입 지원 공개 조회 API (인증 불필요)
 	                    .requestMatchers("/api/competitions/**", "/api/teams/**").permitAll()
@@ -52,8 +59,10 @@ public class SecurityConfig {
 					.defaultSuccessUrl("/")
 					.permitAll())
 
-			// 로그아웃 설정
-			.logout(logout -> logout.logoutSuccessUrl("/login").permitAll());
+			// 로그아웃 설정 — API 클라이언트는 302 redirect를 CORS 에러로 처리하므로 200 반환
+			.logout(logout -> logout
+					.logoutSuccessHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK))
+					.permitAll());
 
 		return http.build();
 	}

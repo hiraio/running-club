@@ -14,18 +14,23 @@ import type { AuthUser } from "./types";
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
+  /** 일반 로그인 직후 true → 대시보드에서 WelcomeOverlay 표시 */
+  showWelcome: boolean;
   setUser: (user: AuthUser | null) => void;
+  /** 로그인 성공 시 true, WelcomeOverlay 종료 시 false */
+  setShowWelcome: (show: boolean) => void;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  showWelcome: false,
   setUser: () => {},
+  setShowWelcome: () => {},
   logout: async () => {},
 });
 
-/** user-role 쿠키를 JS에서 설정 (미들웨어가 읽는 용도) */
 function setRoleCookie(role: string | null) {
   if (role) {
     document.cookie = `user-role=${role};path=/;SameSite=Lax`;
@@ -37,6 +42,7 @@ function setRoleCookie(role: string | null) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     getMe().then((me) => {
@@ -56,14 +62,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await apiLogout();
+    try { await apiLogout(); } catch { /* 세션 만료 등 무시 */ }
     setUserState(null);
+    setShowWelcome(false);
     setRoleCookie(null);
     localStorage.removeItem("loggedIn");
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, setUser, logout }}>
+    <AuthContext.Provider value={{ user, loading, showWelcome, setUser, setShowWelcome, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -157,10 +157,30 @@ VALUES (NULL, NULL, '홍길동', 'USER', '010-1234-5678', NOW());
 ```
 /h2-console/**, /join, /login, /css/**, /js/**, /photos/**
 /api/auth/first-login, /api/auth/login    ← JSON 인증 엔드포인트
-/api/records/team/**, /api/ranking/**
+/api/records/team/**, /api/records/group/**, /api/ranking/**
 /api/competitions/**, /api/teams/**
+/api/notices/**                           ← 공지사항 공개 조회
+OPTIONS /**                               ← CORS 프리플라이트 전체 허용 (rule 0)
 ```
 `/api/auth/setup-account`는 **permitAll 아님** — 반드시 인증 세션 필요
+
+**6. 로그아웃 설정 (중요)**
+- `LogoutFilter`는 `DispatcherServlet` 앞에서 실행되어 CORS 헤더가 없는 302 redirect를 반환함
+- 이를 방지하기 위해 `logoutSuccessHandler`로 HTTP 200 반환으로 변경:
+```java
+.logout(logout -> logout
+    .logoutSuccessHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK))
+    .permitAll())
+```
+- 프론트 `auth-context.tsx`의 `logout()`은 `apiLogout()` 실패와 무관하게 클라이언트 상태를 정리:
+```typescript
+try { await apiLogout(); } catch { /* 세션 만료 등 무시 */ }
+setUserState(null); setRoleCookie(null); localStorage.removeItem("loggedIn");
+```
+
+**7. CORS 설정 (WebConfig)**
+- `allowedMethods`에 `GET, POST, PUT, PATCH, DELETE, OPTIONS` 모두 포함
+- `allowedOrigins`: `http://localhost:3000`
 
 ---
 
@@ -172,32 +192,41 @@ VALUES (NULL, NULL, '홍길동', 'USER', '010-1234-5678', NOW());
 lib/
   api.ts              API 호출 함수 전체 (credentials: include 기본)
   auth-context.tsx    AuthProvider, useAuth() — user 상태 + user-role 쿠키 관리
-  types.ts            AuthUser, RunningRecord 등 공유 타입
+  types.ts            AuthUser, RunningRecord, CompetitionBattle, NoticeSummary 등 공유 타입
 
 middleware.ts         Edge runtime 라우트 보호 (user-role 쿠키 기반)
+                      /notices는 matcher에서 제외 — 인증 없이 공개 접근
 
 app/
   login/page.tsx      로그인 (일반/최초 탭 전환)
-  setup-account/      최초 로그인 후 계정 설정 페이지
-  dashboard/          사용자 대시보드
+  setup-account/      최초 로그인 후 계정 설정 (Step1: 계정, Step2: 프로필)
+  dashboard/          사용자 대시보드 (프로필 + Team Battle 카드 + 목표 게이지 + 최근 기록)
+  competition/        대회 현황 (팀 배틀 VS바, 조 기여 랭킹, 오늘의 MVP, D-Day)
   records/            내 기록
   ranking/            랭킹
+  notices/            공지사항 목록 (공개, 필독/대회소식 배지, 새 공지 dot)
+  notices/[id]/       공지사항 상세 (Markdown 렌더링, react-markdown + remark-gfm)
   admin/              관리자 홈
-  admin/approvals/    기록 승인 (→ admin/records/page.tsx 재사용)
+  admin/approvals/    기록 승인
   admin/competitions/ 대회 관리
+  admin/notices/      공지사항 관리 (생성/삭제 다이얼로그)
 
 components/
-  NavigationWrapper.tsx  경로+인증 상태 기반 네비게이션 선택
-  UserSidebar.tsx         사용자용 (대시보드/내기록/랭킹)
-  AdminSidebar.tsx        관리자용 (관리자홈/기록승인/대회관리)
-  Navbar.tsx              비로그인 및 공개 페이지용 상단 바
+  NavigationWrapper.tsx   경로+인증 상태 기반 네비게이션 선택
+  UserSidebar.tsx          사용자용 (대시보드/대회현황/내기록/랭킹/공지사항)
+                           공지사항 메뉴에 새 글 있을 때 파란 dot 표시
+                           localStorage.noticesLastSeen 기준으로 판단
+  AdminSidebar.tsx         관리자용 (관리자홈/기록승인/대회관리/공지사항)
+  Navbar.tsx               비로그인 및 공개 페이지용 상단 바
+  WelcomeOverlay.tsx       최초 로그인 후 3초 환영 오버레이
+  GoalProgressRing.tsx     원형 목표 달성 게이지
 ```
 
 ### 네비게이션 선택 로직 (NavigationWrapper)
 
 ```
 /admin/** → AdminSidebar
-/dashboard, /records, /ranking + 로그인 상태 → UserSidebar (ADMIN이면 AdminSidebar)
+/dashboard, /competition, /records, /ranking, /notices + 로그인 상태 → UserSidebar (ADMIN이면 AdminSidebar)
 그 외 (공개 경로, 미로그인) → Navbar
 ```
 
@@ -220,7 +249,7 @@ interface AuthUser {
 | 경로 | 조건 |
 |------|------|
 | `/admin/**` | `user-role=ADMIN` 필요, USER → `/dashboard` |
-| `/dashboard`, `/records/**` | 로그인 필요, ADMIN → `/admin` |
+| `/dashboard`, `/competition`, `/records/**` | 로그인 필요, ADMIN → `/admin` |
 | `/setup-account` | 로그인 필요 |
 | `/login` | 이미 로그인 시 역할별 홈으로 리다이렉트 |
 
@@ -238,7 +267,7 @@ interface AuthUser {
 | `POST /api/auth/login` | 일반 로그인 (JSON, loginId+password) |
 | `POST /api/auth/setup-account` | 계정 설정 (최초 로그인 후 인증 상태에서) |
 | `GET /api/me` | 현재 사용자 정보 (needsSetup, groupId 포함) |
-| `POST /logout` | Spring Security 세션 종료 |
+| `POST /logout` | Spring Security 세션 종료 (200 반환) |
 
 #### 관리자 — 대회/팀/조 관리
 | 엔드포인트 | 설명 |
@@ -267,6 +296,7 @@ interface AuthUser {
 | 엔드포인트 | 설명 |
 |-----------|------|
 | `GET /api/competitions/active` | 활성 대회 목록 (ApiResponse 포맷) |
+| `GET /api/competitions/active/battle` | 진행 중 대회 배틀 데이터 (팀전적/조기여/MVP/D-Day) |
 | `GET /api/competitions/{id}/teams` | 대회별 팀 목록 (ApiResponse 포맷) |
 | `GET /api/teams/{id}/groups` | 팀별 조 목록 (ApiResponse 포맷) |
 
@@ -278,6 +308,11 @@ interface AuthUser {
 | `GET /api/records/team/{teamId}` | 팀 기록 조회 (인증 불필요) |
 | `GET /api/records/group/{groupId}` | 조 기록 조회 (인증 불필요) |
 
+#### 유저 — 대시보드
+| 엔드포인트 | 설명 |
+|-----------|------|
+| `GET /api/me/dashboard` | 개인 대시보드 (기록 통계, 팀 순위, 최근 기록 5건) |
+
 #### 랭킹 (인증 불필요)
 | 엔드포인트 | 설명 |
 |-----------|------|
@@ -285,9 +320,50 @@ interface AuthUser {
 | `GET /api/ranking/groups` | 조 랭킹 (`?competitionId=` 선택) |
 | `GET /api/ranking/members` | 개인 랭킹 (`?competitionId=` 선택) |
 
+#### 공지사항 (인증 불필요 조회 / 관리자 전용 쓰기)
+| 엔드포인트 | 설명 |
+|-----------|------|
+| `GET /api/notices` | 공지 목록 (고정글 우선, 최신순, ApiResponse 포맷) |
+| `GET /api/notices/{id}` | 공지 단건 (본문 포함, ApiResponse 포맷) |
+| `POST /api/admin/notices` | 공지 생성 (title, content, isPinned) |
+| `PATCH /api/admin/notices/{id}` | 공지 수정 (부분 업데이트) |
+| `DELETE /api/admin/notices/{id}` | 공지 삭제 |
+
 ### 미구현 (우선순위 순)
-1. 공지사항 CRUD (`GET /api/notices`, `POST/PATCH/DELETE /api/admin/notices/{id}`)
-2. 관리자 회원 관리
+1. 관리자 회원 관리
+
+---
+
+## 대회 배틀 시스템 (`/competition` 페이지)
+
+### 백엔드
+
+`CompetitionBattleService` — 진행 중(PROCEEDING) 또는 준비 중(READY) 대회를 자동 선택해 배틀 데이터 반환.
+
+**응답 DTO**: `CompetitionBattleResponse`
+```json
+{
+  "competitionId": 1,
+  "competitionName": "2024 봄 대회",
+  "dDay": 10,
+  "teams": [{ "teamId":1, "teamName":"A팀", "colorCode":"#E74C3C", "totalKm":120.5 }],
+  "groupRankings": [{ "rank":1, "groupName":"1조", "teamName":"A팀", "teamColorCode":"#E74C3C",
+                      "totalKm":45.2, "recordCount":12, "isTopContributor":true }],
+  "todayMvp": { "memberId":3, "name":"홍길동", "teamName":"A팀", "teamColorCode":"#E74C3C",
+                "groupName":"1조", "todayKm":8.5 }
+}
+```
+
+**새로 추가된 JPQL 쿼리** (`RunningRecordRepository`):
+- `getGroupContributionsByCompetition(competitionId)` — 조별 누적 거리 + 기록 수
+- `findTodayMvpCandidates(competitionId, today, pageable)` — 오늘의 최다 거리 멤버
+
+### 프론트엔드 (`app/competition/page.tsx`)
+
+- **TeamBattleBar**: CSS 퍼센트 분할 애니메이션 바, 팀 컬러 반영
+- **GroupRow**: 조별 기여 수평 바, 금/은/동 뱃지, 최고 기여 조에 선물 뱃지
+- **DdayBadge**: D-Day 카운트다운
+- **TodayMVP**: 오늘 최다 거리 멤버 강조 표시
 
 ---
 

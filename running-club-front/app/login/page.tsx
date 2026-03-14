@@ -20,7 +20,7 @@ type Mode = "normal" | "first";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setUser } = useAuth();
+  const { setUser, setShowWelcome } = useAuth();
   const [mode, setMode] = useState<Mode>("normal");
 
   // 일반 로그인 필드
@@ -45,7 +45,13 @@ export default function LoginPage() {
         return;
       }
       setUser(user);
-      router.push(user.role === "ADMIN" ? "/admin" : "/dashboard");
+      if (user.role === "ADMIN") {
+        router.push("/admin");
+        return;
+      }
+      // USER: AuthContext showWelcome → 대시보드에서 오버레이 렌더링
+      setShowWelcome(true);
+      router.push("/dashboard");
     } catch {
       setError("로그인 중 오류가 발생했습니다.");
     } finally {
@@ -59,18 +65,21 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const user = await firstLogin(name, phone);
-      if (!user) {
-        setError("이름 또는 전화번호가 올바르지 않습니다.");
-        return;
-      }
       setUser(user);
       if (user.needsSetup) {
         router.push("/setup-account");
       } else {
-        router.push(user.role === "ADMIN" ? "/admin" : "/dashboard");
+        setShowWelcome(true);
+        router.push("/dashboard");
       }
-    } catch {
-      setError("로그인 중 오류가 발생했습니다.");
+    } catch (err) {
+      if (err instanceof Error && err.message === "ALREADY_REGISTERED") {
+        // 이미 계정 설정된 유저 → 일반 로그인으로 안내
+        switchMode("normal");
+        setError("이미 계정이 설정된 회원입니다. 아이디와 비밀번호로 로그인해주세요.");
+      } else {
+        setError("이름 또는 전화번호가 올바르지 않습니다.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -84,148 +93,148 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-background">
-      <Card className="w-full max-w-md bg-card border-border/50 shadow-xl">
-        <CardHeader className="space-y-1 text-center">
-          <div className="text-4xl mb-2">🏃</div>
-          <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
-            Running Club
-          </CardTitle>
-          <CardDescription className="text-muted-foreground">
-            {mode === "normal"
-              ? "아이디와 비밀번호로 로그인하세요"
-              : "등록된 이름과 전화번호로 처음 로그인하세요"}
-          </CardDescription>
-        </CardHeader>
+        <Card className="w-full max-w-md bg-card border-border/50 shadow-xl">
+          <CardHeader className="space-y-1 text-center">
+            <div className="text-4xl mb-2">🏃</div>
+            <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
+              Running Club
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              {mode === "normal"
+                ? "아이디와 비밀번호로 로그인하세요"
+                : "등록된 이름과 전화번호로 처음 로그인하세요"}
+            </CardDescription>
+          </CardHeader>
 
-        <CardContent className="space-y-4">
-          {/* 모드 전환 탭 */}
-          <div className="flex rounded-lg border border-border/50 overflow-hidden">
-            <button
-              type="button"
-              onClick={() => switchMode("normal")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors ${
-                mode === "normal"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <KeyRound className="size-3.5" />
-              일반 로그인
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode("first")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors ${
-                mode === "first"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <UserCheck className="size-3.5" />
-              최초 로그인
-            </button>
-          </div>
-
-          {/* 일반 로그인 폼 */}
-          {mode === "normal" && (
-            <form onSubmit={handleNormalLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="loginId" className="text-foreground">아이디</Label>
-                <Input
-                  id="loginId"
-                  type="text"
-                  placeholder="아이디를 입력하세요"
-                  value={loginId}
-                  onChange={(e) => setLoginId(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className="bg-secondary border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-foreground">비밀번호</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="비밀번호를 입력하세요"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className="bg-secondary border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
-                />
-              </div>
-              {error && (
-                <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
-                  {error}
-                </div>
-              )}
-              <Button
-                type="submit"
-                disabled={isLoading || !loginId || !password}
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+          <CardContent className="space-y-4">
+            {/* 모드 전환 탭 */}
+            <div className="flex rounded-lg border border-border/50 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => switchMode("normal")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors ${
+                  mode === "normal"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
               >
-                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />로그인 중...</> : "로그인"}
-              </Button>
-            </form>
-          )}
-
-          {/* 최초 로그인 폼 */}
-          {mode === "first" && (
-            <form onSubmit={handleFirstLogin} className="space-y-4">
-              <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-sm text-muted-foreground">
-                관리자가 사전 등록한 이름과 전화번호를 입력하세요.
-                로그인 후 아이디·비밀번호를 설정합니다.
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-foreground">이름</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="홍길동"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className="bg-secondary border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-foreground">전화번호</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="010-1234-5678"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className="bg-secondary border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
-                />
-              </div>
-              {error && (
-                <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
-                  {error}
-                </div>
-              )}
-              <Button
-                type="submit"
-                disabled={isLoading || !name || !phone}
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+                <KeyRound className="size-3.5" />
+                일반 로그인
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode("first")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors ${
+                  mode === "first"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
               >
-                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />확인 중...</> : "다음"}
-              </Button>
-            </form>
-          )}
+                <UserCheck className="size-3.5" />
+                최초 로그인
+              </button>
+            </div>
 
-          <div className="text-center text-sm text-muted-foreground">
-            계정이 없으신가요?{" "}
-            <a href="/join" className="text-primary hover:underline font-medium">
-              회원가입
-            </a>
-          </div>
-        </CardContent>
-      </Card>
+            {/* 일반 로그인 폼 */}
+            {mode === "normal" && (
+              <form onSubmit={handleNormalLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="loginId" className="text-foreground">아이디</Label>
+                  <Input
+                    id="loginId"
+                    type="text"
+                    placeholder="아이디를 입력하세요"
+                    value={loginId}
+                    onChange={(e) => setLoginId(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="bg-secondary border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-foreground">비밀번호</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="비밀번호를 입력하세요"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="bg-secondary border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
+                  />
+                </div>
+                {error && (
+                  <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
+                    {error}
+                  </div>
+                )}
+                <Button
+                  type="submit"
+                  disabled={isLoading || !loginId || !password}
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+                >
+                  {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />로그인 중...</> : "로그인"}
+                </Button>
+              </form>
+            )}
+
+            {/* 최초 로그인 폼 */}
+            {mode === "first" && (
+              <form onSubmit={handleFirstLogin} className="space-y-4">
+                <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-sm text-muted-foreground">
+                  관리자가 사전 등록한 이름과 전화번호를 입력하세요.
+                  로그인 후 아이디·비밀번호를 설정합니다.
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-foreground">이름</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="홍길동"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="bg-secondary border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-foreground">전화번호</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="010-1234-5678"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="bg-secondary border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
+                  />
+                </div>
+                {error && (
+                  <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
+                    {error}
+                  </div>
+                )}
+                <Button
+                  type="submit"
+                  disabled={isLoading || !name || !phone}
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+                >
+                  {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />확인 중...</> : "다음"}
+                </Button>
+              </form>
+            )}
+
+            <div className="text-center text-sm text-muted-foreground">
+              계정이 없으신가요?{" "}
+              <a href="/join" className="text-primary hover:underline font-medium">
+                회원가입
+              </a>
+            </div>
+          </CardContent>
+        </Card>
     </div>
   );
 }

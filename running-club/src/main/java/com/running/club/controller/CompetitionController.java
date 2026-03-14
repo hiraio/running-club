@@ -8,9 +8,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.running.club.domain.ApiResponse;
+import com.running.club.domain.CompetitionBattleResponse;
 import com.running.club.domain.CompetitionForJoinDTO;
 import com.running.club.domain.GroupForJoinDTO;
 import com.running.club.domain.TeamForJoinDTO;
+import com.running.club.service.CompetitionBattleService;
 import com.running.club.service.PublicCompetitionService;
 
 import lombok.RequiredArgsConstructor;
@@ -29,7 +31,20 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class CompetitionController {
 
-    private final PublicCompetitionService publicCompetitionService;
+    private final PublicCompetitionService   publicCompetitionService;
+    private final CompetitionBattleService   competitionBattleService;
+
+    /**
+     * 대회 현황 배틀 데이터 (인증 불필요).
+     * 팀 배틀 현황 + 조별 기여도 + 오늘의 MVP를 단일 호출로 반환.
+     * /api/competitions/** permitAll 적용됨.
+     */
+    @GetMapping("/api/competitions/active/battle")
+    public ResponseEntity<CompetitionBattleResponse> getActiveBattle() {
+        log.info("[COMPETITION] 대회 현황 배틀 조회 요청");
+        CompetitionBattleResponse result = competitionBattleService.getActiveBattle();
+        return ResponseEntity.ok(result);
+    }
 
     /**
      * 활성 대회 목록 조회.
@@ -53,6 +68,19 @@ public class CompetitionController {
         log.info("[COMPETITION] 대회 팀 목록 조회 요청 - competitionId={}", competitionId);
         List<TeamForJoinDTO> result = publicCompetitionService.getTeamsByCompetition(competitionId);
         log.info("[COMPETITION] 대회 팀 목록 조회 완료 - competitionId={}, 건수={}", competitionId, result.size());
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
+
+    /**
+     * 특정 대회의 전체 조 목록 조회 (팀명 포함).
+     * 회원가입 시 대회 선택 후 조를 바로 선택하는 단계에서 사용.
+     */
+    @GetMapping("/api/competitions/{competitionId}/groups")
+    public ResponseEntity<ApiResponse<List<GroupForJoinDTO>>> getGroupsByCompetition(
+            @PathVariable Integer competitionId) {
+        log.info("[COMPETITION] 대회 조 목록 조회 요청 - competitionId={}", competitionId);
+        List<GroupForJoinDTO> result = publicCompetitionService.getGroupsByCompetition(competitionId);
+        log.info("[COMPETITION] 대회 조 목록 조회 완료 - 건수={}", result.size());
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
 

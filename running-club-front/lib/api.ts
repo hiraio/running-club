@@ -1,6 +1,10 @@
 import type {
   ApiResponse,
   AuthUser,
+  CompetitionBattle,
+  MemberProfile,
+  MemberProfileRequest,
+  MemberDashboardData,
   CompetitionForJoin,
   TeamForJoin,
   GroupForJoin,
@@ -19,6 +23,9 @@ import type {
   GroupDetail,
   GroupCreateRequest,
   GroupUpdateRequest,
+  NoticeSummary,
+  NoticeDetail,
+  NoticeCreateRequest,
 } from "./types";
 
 // ============================================================
@@ -94,14 +101,23 @@ export const login = async (
  * 최초 로그인 (이름 + 전화번호).
  * DB에 미리 등록된 사용자용. 성공 시 세션 수립.
  * needsSetup=true이면 /setup-account로 이동 필요.
- * 실패(이름/전화 불일치) 시 null 반환.
+ *
+ * @throws Error("ALREADY_REGISTERED") — loginId가 이미 설정된 사용자
+ * @throws Error("NOT_FOUND") — 이름/전화 불일치
  */
 export const firstLogin = async (
   name: string,
   phone: string
-): Promise<AuthUser | null> => {
+): Promise<AuthUser> => {
   const res = await jsonRequest("POST", `${BASE}/api/auth/first-login`, { name, phone });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    let msg = "NOT_FOUND";
+    try {
+      const body = await res.json();
+      if (body?.message === "ALREADY_REGISTERED") msg = "ALREADY_REGISTERED";
+    } catch { /* ignore */ }
+    throw new Error(msg);
+  }
   return res.json();
 };
 
@@ -163,6 +179,59 @@ export const join = async (
 };
 
 // ============================================================
+// 내 프로필
+// ============================================================
+
+/**
+ * 개인 대시보드 데이터 (프로필 + 통계 + 최근기록 통합).
+ * 단일 API 호출로 대시보드에 필요한 모든 데이터 수신.
+ */
+export const getMyDashboard = async (): Promise<MemberDashboardData> => {
+  const res = await fetch(`${BASE}/api/me/dashboard`, DEFAULT_OPTS);
+  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  if (!res.ok) await handleError(res);
+  return res.json();
+};
+
+/**
+ * 현재 사용자 프로필 조회.
+ * 미작성 시 memberId만 있고 나머지 null.
+ */
+export const getMemberProfile = async (): Promise<MemberProfile> => {
+  const res = await fetch(`${BASE}/api/me/profile`, DEFAULT_OPTS);
+  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  if (!res.ok) await handleError(res);
+  return res.json();
+};
+
+/**
+ * 프로필 저장 (upsert).
+ * null 필드는 기존 값 유지 (부분 업데이트).
+ */
+export const updateMemberProfile = async (
+  data: MemberProfileRequest
+): Promise<MemberProfile> => {
+  const res = await jsonRequest("PUT", `${BASE}/api/me/profile`, data);
+  if (!res.ok) await handleError(res);
+  return res.json();
+};
+
+// ============================================================
+// 공개 — 대회 현황 배틀
+// ============================================================
+
+/**
+ * 현재 진행 중인 대회의 배틀 현황 (팀 배틀 + 조 기여도 + 오늘의 MVP).
+ * 인증 불필요 — permitAll 적용.
+ * 진행 중인 대회가 없으면 400 에러.
+ */
+export const getCompetitionBattle = async (): Promise<CompetitionBattle> => {
+  const res = await fetch(`${BASE}/api/competitions/active/battle`, DEFAULT_OPTS);
+  if (!res.ok) await handleError(res);
+  return res.json();
+};
+
+// ============================================================
 // 공개 — 회원가입 지원
 // ============================================================
 
@@ -196,8 +265,19 @@ export const getTeamsByCompetition = async (
 };
 
 /**
- * 팀별 조 목록 조회.
- * 빈 배열 = 조 미구성 (에러 아님, 프론트에서 "조 없음" UI 처리).
+ * 대회 전체 조 목록 조회 (팀명 포함).
+ * 회원가입 시 대회 선택 → 조 선택 단계에서 사용.
+ * 빈 배열 = 조 미구성.
+ */
+export const getGroupsByCompetition = async (
+  competitionId: number
+): Promise<ApiResponse<GroupForJoin[]>> => {
+  const res = await fetch(`${BASE}/api/competitions/${competitionId}/groups`, DEFAULT_OPTS);
+  return res.json();
+};
+
+/**
+ * 팀별 조 목록 조회 (관리자 용도 등에서 필요 시 사용).
  */
 export const getGroupsByTeam = async (
   teamId: number
@@ -541,4 +621,42 @@ export const rejectRecord = async (
   );
   if (!res.ok) await handleError(res);
   return res.text();
+};
+
+// ============================================================
+// 공지사항
+// ============================================================
+
+/** GET /api/notices — 목록 (인증 불필요) */
+export const getNotices = async (): Promise<NoticeSummary[]> => {
+  const res = await fetch(`${BASE}/api/notices`, DEFAULT_OPTS);
+  if (!res.ok) await handleError(res);
+  const body: ApiResponse<NoticeSummary[]> = await res.json();
+  return body.data;
+};
+
+/** GET /api/notices/{id} — 단건 (인증 불필요) */
+export const getNotice = async (id: number): Promise<NoticeDetail> => {
+  const res = await fetch(`${BASE}/api/notices/${id}`, DEFAULT_OPTS);
+  if (!res.ok) await handleError(res);
+  const body: ApiResponse<NoticeDetail> = await res.json();
+  return body.data;
+};
+
+/** POST /api/admin/notices — 생성 (관리자) */
+export const createNotice = async (
+  request: NoticeCreateRequest
+): Promise<NoticeDetail> => {
+  const res = await jsonRequest("POST", `${BASE}/api/admin/notices`, request);
+  if (!res.ok) await handleError(res);
+  return res.json();
+};
+
+/** DELETE /api/admin/notices/{id} — 삭제 (관리자) */
+export const deleteNotice = async (id: number): Promise<void> => {
+  const res = await fetch(`${BASE}/api/admin/notices/${id}`, {
+    ...DEFAULT_OPTS,
+    method: "DELETE",
+  });
+  if (!res.ok) await handleError(res);
 };
