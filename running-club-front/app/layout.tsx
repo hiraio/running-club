@@ -1,7 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { AuthGuard } from "@/components/AuthGuard";
 import { NavigationWrapper } from "@/components/NavigationWrapper";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "러닝 클럽",
@@ -19,11 +23,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className="dark">
-      <body className="min-h-screen bg-background text-foreground">
+      <body className={`${inter.className} min-h-screen bg-background text-foreground`}>
         <AuthProvider>
-          <NavigationWrapper>
-            <main>{children}</main>
-          </NavigationWrapper>
+          <AuthGuard>
+            <NavigationWrapper>
+              <main>{children}</main>
+            </NavigationWrapper>
+          </AuthGuard>
         </AuthProvider>
       </body>
     </html>
