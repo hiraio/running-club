@@ -252,3 +252,154 @@ GET /actuator/prometheus
 
 ## 미구현
 - 관리자 회원 관리 (목록 조회 / 역할 변경 / 팀·조 재배정)
+
+---
+
+## 운영 인프라 구성 및 연결 원리
+
+### 전체 구조
+
+```
+사용자 브라우저
+     │  HTTPS
+     ▼
+┌─────────────────────────────┐
+│  Vercel (프론트엔드)         │  Next.js 앱 빌드·배포
+│  running-club-front/ 폴더   │  전 세계 CDN으로 서빙
+└─────────────────────────────┘
+     │
+     │  HTTP API 요청
+     │  (브라우저가 직접 백엔드로 요청)
+     ▼
+┌─────────────────────────────┐
+│  Oracle Cloud VM (백엔드)   │  Public IP: 217.142.231.239
+│  Spring Boot :8080          │  Ubuntu 22.04, Java 17
+└─────────────────────────────┘
+     │
+     │  JDBC
+     ▼
+┌─────────────────────────────┐
+│  Supabase PostgreSQL (DB)   │
+└─────────────────────────────┘
+```
+
+### 연결 원리 상세
+
+| 구간 | 방식 | 설명 |
+|------|------|------|
+| 브라우저 → Vercel | HTTPS | Vercel이 Next.js 앱을 CDN으로 서빙. 정적 파일과 라우팅을 담당 |
+| 브라우저 → Oracle | HTTP API | API 요청은 브라우저가 직접 Oracle 서버로 보냄. Vercel을 거치지 않음 |
+| 로그인 세션 유지 | Cookie | Spring Security가 로그인 시 JSESSIONID 쿠키 발급. 프론트는 `credentials: "include"` 옵션으로 모든 API 요청에 쿠키를 자동으로 포함시킴 |
+| CORS 허용 | Spring WebConfig | 브라우저는 보안상 다른 출처(도메인)로의 API 요청을 기본 차단함. Oracle 서버의 `WebConfig`에서 Vercel 도메인을 허용 오리진으로 명시해야 API 호출이 가능 |
+| 환경변수 주입 | Vercel ENV | 프론트 코드에서 `process.env.NEXT_PUBLIC_API_URL`로 백엔드 주소를 참조. Vercel 대시보드에 `NEXT_PUBLIC_API_URL=http://217.142.231.239:8080`으로 설정 |
+
+### Vercel 배포 설정
+
+모노레포 구조(백엔드 + 프론트가 한 레포)이기 때문에 Vercel에 Root Directory를 반드시 지정해야 함.
+
+```
+Vercel Import 설정
+├── Root Directory : running-club-front   ← 필수. 미설정 시 404
+├── Framework      : Next.js              ← Root Directory 설정 후 자동 감지
+└── Environment Variables
+    └── NEXT_PUBLIC_API_URL = http://217.142.231.239:8080
+```
+
+---
+
+## 트러블슈팅
+
+### 1. Uncaught SyntaxError: Invalid or unexpected token
+
+**증상**
+브라우저 콘솔에 SyntaxError가 뜨며 화면이 아무것도 표시되지 않음.
+
+**원인**
+`layout.tsx`에서 `next/font/google`(Inter 폰트)을 import할 때, Next.js의 Edge Runtime 환경에서 `__dirname is not defined` 에러가 발생함. 이로 인해 JS 청크 파일 로드 실패 → 브라우저가 오류 HTML 페이지를 JS로 파싱하려다 SyntaxError 발생.
+
+**해결**
+`layout.tsx`에서 `next/font/google` import 제거.
+
+```tsx
+// 삭제
+import { Inter } from "next/font/google";
+const inter = Inter({ subsets: ["latin"] });
+
+// 변경 전
+<body className={`${inter.className} min-h-screen bg-background text-foreground`}>
+
+// 변경 후
+<body className="min-h-screen bg-background text-foreground">
+```
+
+---
+
+### 2. CORS 에러 — 401 응답에 Access-Control-Allow-Origin 헤더 없음
+
+**증상**
+```
+Access to fetch at 'http://localhost:8080/api/me' from origin 'http://localhost:3000'
+has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present
+```
+
+**원인**
+Spring Security가 인증이 필요한 경로(`/api/me` 등)에서 401을 반환할 때, Spring MVC의 CORS 설정(`WebConfig.addCorsMappings`)이 적용되기 전에 Security 필터가 먼저 응답을 내보냄. 그 결과 CORS 헤더가 없는 채로 401이 반환되어 브라우저가 CORS 에러로 표시함.
+
+**해결**
+`SecurityConfig`에 `.cors(Customizer.withDefaults())` 한 줄 추가. 이렇게 하면 Spring Security 레이어에서도 `WebConfig`의 CORS 설정을 참조하여 에러 응답에도 CORS 헤더를 포함시킴.
+
+```java
+http.cors(Customizer.withDefaults())  // 이 줄 추가
+    .csrf(csrf -> csrf.disable())
+    ...
+```
+
+---
+
+### 3. Vercel 배포 후 모든 URL 404
+
+**증상**
+Vercel 대시보드에서 빌드 상태가 Ready인데도 URL 접속 시 `NOT_FOUND` 404 반환.
+
+**원인 A — Root Directory 미설정**
+레포 루트에 Spring Boot + Next.js가 함께 있는 모노레포인데, Vercel이 루트에서 Next.js 앱을 찾지 못함.
+
+**해결 A**
+Vercel 프로젝트 Settings → General → Root Directory를 `running-club-front`로 지정.
+
+**원인 B — v0.dev 프로젝트와 도메인 충돌**
+`v0-running-club.vercel.app` 도메인이 v0.dev로 자동 생성된 별개의 Vercel 프로젝트에 연결되어 있어, 새로 배포한 프로젝트가 해당 도메인에 연결되지 않음.
+
+**해결 B**
+기존 Vercel 프로젝트 삭제 후 GitHub 레포에서 새로 Import. Import 시 아래 순서대로 설정:
+
+1. Root Directory → `running-club-front` 입력 (프레임워크가 자동 감지됨)
+2. Environment Variables → `NEXT_PUBLIC_API_URL = http://217.142.231.239:8080` 추가
+3. Deploy
+
+---
+
+### 4. Oracle 서버 외부에서 접속 불가 (ERR_CONNECTION_REFUSED)
+
+**증상**
+`curl http://217.142.231.239:8080` 응답 없음 또는 연결 거부.
+
+**원인 및 체크리스트**
+
+```bash
+# Spring Boot가 실행 중인지 확인
+ps aux | grep java
+
+# iptables에서 8080 포트가 열려있는지 확인
+sudo iptables -L INPUT -n | grep 8080
+
+# 포트 허용 추가 (REJECT 규칙 앞에 삽입해야 효과 있음)
+sudo iptables -I INPUT 1 -p tcp --dport 8080 -j ACCEPT
+```
+
+> ⚠️ `iptables -A`(append) 로 추가하면 기존 REJECT 규칙 뒤에 붙어서 효과가 없음.
+> 반드시 `-I`(insert) 로 앞에 삽입할 것.
+
+Oracle Cloud 콘솔에서도 확인:
+- VCN → Security Lists → Ingress Rules에 TCP 포트 8080 추가 여부
+- Route Table에 인터넷 게이트웨이 Route Rule 추가 여부 (누락 시 SSH도 불가)

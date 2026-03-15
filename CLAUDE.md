@@ -230,7 +230,7 @@ interface AuthUser {
 | HTTPS | Let's Encrypt (Certbot + Nginx) | 미설정 |
 
 ### Oracle VM 정보
-- **Public IP**: 168.138.52.223
+- **Public IP**: 217.142.231.239
 - **Private IP**: 10.0.0.59
 - **인스턴스명**: instance-20260315-1319
 - **OS**: Ubuntu 22.04.5 LTS
@@ -249,7 +249,7 @@ interface AuthUser {
 ssh nd-running
 
 # 직접 접속
-ssh -i C:/sshkey/ssh.key ubuntu@168.138.52.223
+ssh -i C:/sshkey/ssh.key ubuntu@217.142.231.239
 
 # Oracle Cloud Shell (브라우저 터미널) → 내부IP 사용
 ssh -i ~/ssh.key ubuntu@10.0.0.59
