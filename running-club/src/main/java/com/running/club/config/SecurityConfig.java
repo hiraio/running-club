@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -19,7 +20,8 @@ public class SecurityConfig {
 
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-	    http.csrf(csrf -> csrf.disable())
+	    http.cors(Customizer.withDefaults())
+	            .csrf(csrf -> csrf.disable())
 	            .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
 	            .authorizeHttpRequests(auth -> auth
 	                    // 0. CORS 프리플라이트(OPTIONS)는 인증 없이 항상 허용

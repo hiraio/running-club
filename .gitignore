@@ -7,3 +7,9 @@
 # Build artifacts
 /build/
 /out/
+
+# Eclipse workspace metadata
+.metadata/
+
+# Claude Code settings
+.claude/settings.local.json
