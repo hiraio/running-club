@@ -51,6 +51,7 @@ Competition → Team → RunningGroup → Member → RunningRecord
 - **CustomUserDetails**: `getAuthorities()`는 `new SimpleGrantedAuthority(role)` — 람다 금지 (Serializable 미구현)
 - **formLogin 병존**: JSON 로그인(`/api/auth/login`)과 form login(`/login`)이 공존 중. Postman 테스트 시 `Content-Type: application/json`
 - **CORS**: `WebConfig` — `allowedOrigins: http://localhost:3000`, OPTIONS 전체 허용
+- **CORS + 401 문제**: Spring Security가 401 반환 시 CORS 헤더 누락 → `SecurityConfig`에 `.cors(Customizer.withDefaults())` 필수. 없으면 미인증 API 요청이 브라우저에서 CORS 에러로 표시됨
 
 ### SecurityConfig permitAll 경로
 ```
@@ -167,7 +168,11 @@ interface AuthUser {
 }
 ```
 
-### 미들웨어 보호
+### 인증 보호 (AuthGuard)
+
+`middleware.ts` 삭제됨 — Vercel Edge Runtime에서 `__dirname is not defined` 에러 발생으로 제거.
+대신 `components/AuthGuard.tsx` (클라이언트 컴포넌트)가 `layout.tsx`에서 모든 페이지를 감싸며 동일한 보호 로직 수행.
+
 | 경로 | 조건 |
 |------|------|
 | `/login` | 로그인 상태면 역할별 홈으로 리다이렉트 |
@@ -175,8 +180,8 @@ interface AuthUser {
 | `/admin/**` | ADMIN 필요, USER → `/dashboard` |
 | ADMIN이 `/admin` 외 접근 | → `/admin` 리다이렉트 |
 
-- `/join` 회원가입 페이지: 링크 제거 + 미들웨어로 직접 URL 접근도 차단 (로그인 페이지로)
-- matcher: `/((?!_next/static|_next/image|api|photos|favicon.ico).*)` — 정적파일/api 제외 전체
+- 로딩 중에는 스피너 표시 (flash 방지)
+- `/join` 회원가입: 링크 제거 + AuthGuard로 직접 URL 접근도 차단
 
 ---
 
@@ -224,7 +229,7 @@ interface AuthUser {
 | 역할 | 서비스 | 상태 |
 |------|--------|------|
 | 백엔드 | Oracle Cloud Always Free (VM.Standard.E2.1.Micro, ap-osaka-1) | 세팅 중 |
-| 프론트엔드 | Vercel | 미배포 |
+| 프론트엔드 | Vercel | **배포 완료** |
 | DB | Supabase PostgreSQL | 스키마 완료 |
 | 도메인 | DuckDNS (nd-running.duckdns.org) | 미설정 |
 | HTTPS | Let's Encrypt (Certbot + Nginx) | 미설정 |
@@ -258,6 +263,15 @@ ssh -i ~/ssh.key ubuntu@10.0.0.59
 > ⚠️ 기숙사 LAN에서는 포트 22 차단됨 → 핫스팟 사용 필요
 > iptables 설정 전에는 외부에서 SSH 불가 → Oracle Cloud Shell로 우회
 
+### Vercel 배포 설정 (완료)
+
+모노레포 구조이므로 Import 시 반드시 아래 순서대로 설정:
+1. Root Directory → `running-club-front` 먼저 입력 (입력 후 Next.js 자동 감지됨)
+2. Environment Variables → `NEXT_PUBLIC_API_URL = http://217.142.231.239:8080`
+
+> ⚠️ Root Directory 미설정 시 Vercel이 레포 루트를 빌드하려다 Next.js 감지 실패 → 404
+> ⚠️ `next/font/google` import 금지 — Edge Runtime에서 `__dirname is not defined` 에러 발생 → JS 청크 로드 실패 → SyntaxError
+
 ### Oracle VM 세팅 남은 순서
 ```
 1. Cloud Shell → SSH(내부IP) → iptables 열기 (22/80/443/8080)
@@ -268,7 +282,6 @@ ssh -i ~/ssh.key ubuntu@10.0.0.59
 6. DuckDNS 도메인 설정
 7. Nginx 설치 + 리버스 프록시
 8. Certbot HTTPS
-9. Vercel 프론트 배포 (NEXT_PUBLIC_API_URL 설정)
 ```
 
 ### .env 파일 위치 (Oracle VM)
