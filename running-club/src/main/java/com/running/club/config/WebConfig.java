@@ -12,25 +12,27 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${file.upload.dir}")
     private String uploadDir;
 
+    @Value("${cors.allowed.origin:http://localhost:3000}")
+    private String allowedOrigin;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // /photos/파일명 요청 → C:/running-photos/파일명 파일 반환
         registry.addResourceHandler("/photos/**")
                 .addResourceLocations("file:" + uploadDir + "/");
     }
 
     /**
-     * CORS 설정 — Next.js 개발 서버(localhost:3000)에서의 API 호출 허용.
-     * allowCredentials=true: 세션 쿠키(JSESSIONID)를 포함한 요청 허용.
-     * 운영 배포 시 allowedOrigins를 실제 도메인으로 교체.
+     * CORS 설정.
+     * 로컬: application.properties의 cors.allowed.origin 기본값(localhost:3000) 사용.
+     * 운영: 환경 변수 CORS_ALLOWED_ORIGIN → Vercel 도메인 자동 주입.
      */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:3000")
+                .allowedOrigins(allowedOrigin)
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .allowCredentials(true)     // 세션 쿠키 전달 필수
+                .allowCredentials(true)
                 .maxAge(3600);
     }
 }
