@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import ReactMarkdown from "react-markdown";
+import dynamic from "next/dynamic";
+const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 import remarkGfm from "remark-gfm";
 import { getNotice } from "@/lib/api";
 import type { NoticeDetail } from "@/lib/types";
