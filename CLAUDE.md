@@ -218,6 +218,74 @@ interface AuthUser {
 
 ---
 
+## 운영 배포 현황
+
+### 인프라 구성
+| 역할 | 서비스 | 상태 |
+|------|--------|------|
+| 백엔드 | Oracle Cloud Always Free (VM.Standard.E2.1.Micro, ap-osaka-1) | 세팅 중 |
+| 프론트엔드 | Vercel | 미배포 |
+| DB | Supabase PostgreSQL | 스키마 완료 |
+| 도메인 | DuckDNS (nd-running.duckdns.org) | 미설정 |
+| HTTPS | Let's Encrypt (Certbot + Nginx) | 미설정 |
+
+### Oracle VM 정보
+- **Public IP**: 168.138.52.223
+- **Private IP**: 10.0.0.59
+- **인스턴스명**: instance-20260315-1319
+- **OS**: Ubuntu 22.04.5 LTS
+- **SSH 키**: `C:\sshkey\ssh.key` (메인PC) / `~/ssh.key` (Cloud Shell)
+- **SSH 유저**: ubuntu
+
+### 운영 환경 코드 수정 완료 항목
+1. `application-prod.properties` — DB/CORS/파일경로/세션쿠키 env var 기반 설정
+2. `WebConfig.java` — CORS allowedOrigin 환경변수화 (`${CORS_ALLOWED_ORIGIN}`)
+3. `RunningRecordService.java` — 사진 URL에 `server.base-url` prefix 추가 (크로스도메인 사진 로드 해결)
+4. `application-prod.properties` — `SameSite=None; Secure` 세션쿠키 설정 (크로스도메인 로그인 해결)
+
+### Oracle VM SSH 접속 방법
+```bash
+# 메인PC / 노트북 (SSH config 설정 시)
+ssh nd-running
+
+# 직접 접속
+ssh -i C:/sshkey/ssh.key ubuntu@168.138.52.223
+
+# Oracle Cloud Shell (브라우저 터미널) → 내부IP 사용
+ssh -i ~/ssh.key ubuntu@10.0.0.59
+```
+
+> ⚠️ 기숙사 LAN에서는 포트 22 차단됨 → 핫스팟 사용 필요
+> iptables 설정 전에는 외부에서 SSH 불가 → Oracle Cloud Shell로 우회
+
+### Oracle VM 세팅 남은 순서
+```
+1. Cloud Shell → SSH(내부IP) → iptables 열기 (22/80/443/8080)
+2. Java 17 설치
+3. git clone + mvn build (prod 프로필)
+4. .env 파일 작성 (DB_URL, DB_USERNAME, DB_PASSWORD, CORS_ALLOWED_ORIGIN)
+5. systemd 서비스 등록
+6. DuckDNS 도메인 설정
+7. Nginx 설치 + 리버스 프록시
+8. Certbot HTTPS
+9. Vercel 프론트 배포 (NEXT_PUBLIC_API_URL 설정)
+```
+
+### .env 파일 위치 (Oracle VM)
+```
+/opt/nd-running/.env
+```
+필요 환경변수:
+```
+DB_URL=jdbc:postgresql://...supabase.co:5432/postgres
+DB_USERNAME=postgres
+DB_PASSWORD=...
+CORS_ALLOWED_ORIGIN=https://[vercel-domain].vercel.app
+SPRING_PROFILES_ACTIVE=prod
+```
+
+---
+
 ## 테스트 데이터 (H2 SQL 시나리오)
 
 > H2 콘솔(`http://localhost:8080/h2-console`)에서 아래 순서대로 실행.
