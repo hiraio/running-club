@@ -40,6 +40,10 @@ public class RunningRecordService {
     @Value("${file.upload.dir}")
     private String uploadDir;
 
+    // 운영 환경에서 사진 URL에 도메인 prefix 추가 (로컬은 빈 값 → 상대경로 유지)
+    @Value("${server.base-url:}")
+    private String serverBaseUrl;
+
     @Transactional
     public void uploadRecord(Member member, Double distance, Integer duration,
                              LocalDate runningDate, String comment, MultipartFile file) throws Exception {
@@ -73,7 +77,10 @@ public class RunningRecordService {
         log.info("[RECORD-SVC] 대회 도출 - competitionId={}", competition != null ? competition.getId() : "없음");
 
         // 4. 실제 디스크 저장
-        String photoUrl = FileUtil.saveFile(file, uploadDir);
+        String relativeUrl = FileUtil.saveFile(file, uploadDir);
+        String photoUrl = (serverBaseUrl == null || serverBaseUrl.isBlank())
+                ? relativeUrl
+                : serverBaseUrl + relativeUrl;
         log.info("[RECORD-SVC] 사진 저장 완료 - photoUrl={}", photoUrl);
 
         RunningRecord record = RunningRecord.builder()
