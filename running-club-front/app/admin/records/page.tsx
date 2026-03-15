@@ -24,6 +24,7 @@ import {
   CheckCircle,
   XCircle,
   ClipboardCheck,
+  ZoomIn,
 } from "lucide-react";
 
 function formatDuration(seconds: number): string {
@@ -34,23 +35,26 @@ function formatDuration(seconds: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("ko-KR", {
+  return new Date(dateStr).toLocaleDateString("ko-KR", {
     month: "long",
     day: "numeric",
     weekday: "short",
   });
 }
 
+// ── 기록 카드 ──────────────────────────────────────────────────
+
 function RecordCard({
   record,
   onApprove,
   onReject,
+  onPhotoClick,
   isProcessing,
 }: {
   record: RunningRecord;
   onApprove: (id: number) => void;
   onReject: (id: number) => void;
+  onPhotoClick: (url: string) => void;
   isProcessing: boolean;
 }) {
   return (
@@ -87,20 +91,28 @@ function RecordCard({
             </div>
             {record.comment && (
               <p className="text-xs text-muted-foreground italic">
-                "{record.comment}"
+                &ldquo;{record.comment}&rdquo;
               </p>
             )}
           </div>
 
-          {/* 사진 썸네일 */}
+          {/* 사진 썸네일 — 클릭하면 전체화면 */}
           {record.photoUrl ? (
-            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary">
+            <button
+              type="button"
+              className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary focus:outline-none"
+              onClick={() => onPhotoClick(record.photoUrl!)}
+              title="사진 크게 보기"
+            >
               <img
                 src={record.photoUrl}
                 alt="러닝 사진"
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover transition-transform group-hover:scale-105"
               />
-            </div>
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
+                <ZoomIn className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            </button>
           ) : (
             <div className="h-20 w-20 shrink-0 rounded-xl bg-secondary flex items-center justify-center">
               <MapPin className="h-6 w-6 text-muted-foreground/40" />
@@ -132,21 +144,29 @@ function RecordCard({
   );
 }
 
+// ── 메인 페이지 ────────────────────────────────────────────────
+
 export default function AdminRecordsPage() {
   const [records, setRecords] = useState<RunningRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<number | null>(null);
 
-  // 반려 Dialog 상태
+  // 승인 확인 Dialog
+  const [approveTargetId, setApproveTargetId] = useState<number | null>(null);
+  const [isApproving, setIsApproving] = useState(false);
+
+  // 반려 Dialog
   const [rejectTargetId, setRejectTargetId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [isRejecting, setIsRejecting] = useState(false);
 
+  // 사진 전체화면 뷰어
+  const [photoViewUrl, setPhotoViewUrl] = useState<string | null>(null);
+
   const fetchRecords = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getWaitingRecords();
-      setRecords(data);
+      setRecords(await getWaitingRecords());
     } catch (err) {
       console.error("대기 기록 조회 실패:", err);
     } finally {
@@ -154,18 +174,20 @@ export default function AdminRecordsPage() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchRecords();
-  }, [fetchRecords]);
+  useEffect(() => { fetchRecords(); }, [fetchRecords]);
 
-  const handleApprove = async (id: number) => {
-    setProcessingId(id);
+  // 승인 확인 → 실제 API 호출
+  const handleApproveConfirm = async () => {
+    if (!approveTargetId) return;
+    setIsApproving(true);
     try {
-      await approveRecord(id);
-      setRecords((prev) => prev.filter((r) => r.id !== id));
+      await approveRecord(approveTargetId);
+      setRecords((prev) => prev.filter((r) => r.id !== approveTargetId));
+      setApproveTargetId(null);
     } catch (err) {
       console.error("승인 실패:", err);
     } finally {
+      setIsApproving(false);
       setProcessingId(null);
     }
   };
@@ -224,8 +246,9 @@ export default function AdminRecordsPage() {
               <RecordCard
                 key={record.id}
                 record={record}
-                onApprove={handleApprove}
+                onApprove={(id) => { setProcessingId(id); setApproveTargetId(id); }}
                 onReject={handleRejectOpen}
+                onPhotoClick={setPhotoViewUrl}
                 isProcessing={processingId === record.id}
               />
             ))}
@@ -233,7 +256,44 @@ export default function AdminRecordsPage() {
         )}
       </div>
 
-      {/* 반려 사유 Dialog */}
+      {/* ── 승인 확인 Dialog ─────────────────────────────────── */}
+      <Dialog
+        open={approveTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) { setApproveTargetId(null); setProcessingId(null); }
+        }}
+      >
+        <DialogContent className="bg-card border-border sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-primary" />
+              기록을 승인하시겠습니까?
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground pt-1">
+              사진을 꼼꼼히 확인해주세요.<br />
+              승인된 기록은 즉시 랭킹에 반영됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setApproveTargetId(null); setProcessingId(null); }}
+              disabled={isApproving}
+            >
+              취소
+            </Button>
+            <Button
+              className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+              onClick={handleApproveConfirm}
+              disabled={isApproving}
+            >
+              {isApproving ? "처리 중..." : "승인 확인"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── 반려 사유 Dialog ─────────────────────────────────── */}
       <Dialog
         open={rejectTargetId !== null}
         onOpenChange={(open) => { if (!open) setRejectTargetId(null); }}
@@ -275,6 +335,25 @@ export default function AdminRecordsPage() {
               {isRejecting ? "처리 중..." : "반려 확인"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── 사진 전체화면 뷰어 ──────────────────────────────── */}
+      <Dialog
+        open={!!photoViewUrl}
+        onOpenChange={(open) => { if (!open) setPhotoViewUrl(null); }}
+      >
+        <DialogContent className="bg-black/95 border-white/10 max-w-3xl w-full p-2">
+          <DialogHeader className="sr-only">
+            <DialogTitle>인증샷 전체화면</DialogTitle>
+          </DialogHeader>
+          {photoViewUrl && (
+            <img
+              src={photoViewUrl}
+              alt="러닝 인증샷"
+              className="w-full max-h-[80vh] object-contain rounded-lg"
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -29,6 +29,20 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
     List<RunningRecord> findWaiting();
 
     /**
+     * 처리 완료 기록 히스토리 (APPROVED + REJECTED).
+     * approvedBy LEFT JOIN FETCH: AdminHistoryDTO.from()에서 approvedBy.getName() 접근 시 N+1 차단.
+     * createdAt DESC — 최신 처리 순 정렬.
+     */
+    @Query("SELECT r FROM RunningRecord r " +
+           "JOIN FETCH r.member m " +
+           "LEFT JOIN FETCH m.team " +
+           "LEFT JOIN FETCH m.runningGroup " +
+           "LEFT JOIN FETCH r.approvedBy " +
+           "WHERE r.status IN ('APPROVED', 'REJECTED') " +
+           "ORDER BY r.createdAt DESC")
+    List<RunningRecord> findHistory();
+
+    /**
      * 내 기록 조회.
      * JOIN FETCH member.team/runningGroup: RunningRecordDTO.from() 내 Lazy 접근 시 N+1 차단.
      */

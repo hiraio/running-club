@@ -12,7 +12,7 @@ import {
   Trophy,
   ShieldCheck,
   ChevronRight,
-  Users,
+  History,
 } from "lucide-react";
 
 export default function AdminHomePage() {
@@ -100,6 +100,7 @@ export default function AdminHomePage() {
           <p className="text-sm font-medium text-muted-foreground">빠른 이동</p>
           {[
             { label: "기록 승인 처리", desc: "승인 대기중인 러닝 기록 검토", icon: ClipboardCheck, href: "/admin/approvals" },
+            { label: "승인 히스토리", desc: "처리 완료 기록 조회 및 검색", icon: History, href: "/admin/history" },
             { label: "대회 관리", desc: "대회·팀·조 CRUD", icon: Trophy, href: "/admin/competitions" },
           ].map(({ label, desc, icon: Icon, href }) => (
             <Card

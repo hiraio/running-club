@@ -6,6 +6,7 @@ import type {
   MemberProfileRequest,
   MemberDashboardData,
   MemberPublicProfileResponse,
+  AdminHistoryDTO,
   GroupMemberDTO,
   CompetitionForJoin,
   TeamForJoin,
@@ -593,6 +594,16 @@ export const deleteGroup = async (groupId: number): Promise<string> => {
 // ============================================================
 // 관리자 — 기록 승인
 // ============================================================
+
+/**
+ * 처리 완료 기록 히스토리 (APPROVED + REJECTED, 최신순).
+ * 날짜·이름·상태 필터링은 프론트에서 처리.
+ */
+export const getApprovalHistory = async (): Promise<AdminHistoryDTO[]> => {
+  const res = await fetch(`${BASE}/api/admin/records/history`, DEFAULT_OPTS);
+  if (!res.ok) await handleError(res);
+  return res.json();
+};
 
 /**
  * 승인 대기 기록 목록.

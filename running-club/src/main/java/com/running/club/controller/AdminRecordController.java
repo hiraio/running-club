@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.running.club.domain.AdminHistoryDTO;
 import com.running.club.domain.CustomUserDetails;
 import com.running.club.domain.RunningRecordDTO;
 import com.running.club.service.AdminRecordService;
@@ -25,6 +26,19 @@ import lombok.extern.slf4j.Slf4j;
 public class AdminRecordController {
 
     private final AdminRecordService adminRecordService;
+
+    /**
+     * GET /api/admin/records/history
+     * APPROVED + REJECTED 처리 완료 기록 전체 반환 (최신순).
+     * 프론트에서 날짜·이름·상태 필터링 처리.
+     */
+    @GetMapping("/history")
+    public ResponseEntity<List<AdminHistoryDTO>> getHistory() {
+        log.info("[ADMIN-RECORD] 히스토리 조회 요청");
+        List<AdminHistoryDTO> result = adminRecordService.getHistory();
+        log.info("[ADMIN-RECORD] 히스토리 조회 완료 - 건수={}", result.size());
+        return ResponseEntity.ok(result);
+    }
 
     @GetMapping("/waiting")
     public ResponseEntity<List<RunningRecordDTO>> getWaitingRecords() {

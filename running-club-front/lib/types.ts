@@ -452,6 +452,28 @@ export interface MemberPublicProfileResponse {
   recentRecords: RunningRecord[];
 }
 
+/**
+ * GET /api/admin/records/history 응답 배열의 각 항목.
+ * APPROVED + REJECTED 처리 완료 기록.
+ * approvedByName: 처리한 관리자 이름 (null = 미처리)
+ * rejectedReason: 반려 사유 (REJECTED일 때만)
+ */
+export interface AdminHistoryDTO {
+  id: number;
+  distance: number;
+  duration: number;
+  runningDate: string;
+  status: "APPROVED" | "REJECTED";
+  photoUrl: string | null;
+  comment: string | null;
+  createdAt: string;
+  userName: string;
+  teamName: string | null;
+  groupName: string | null;
+  approvedByName: string | null;
+  rejectedReason: string | null;
+}
+
 /** GET /api/groups/{id}/members 응답 배열의 각 항목 */
 export interface GroupMemberDTO {
   memberId: number;

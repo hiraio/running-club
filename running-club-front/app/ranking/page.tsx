@@ -17,6 +17,7 @@ import type { RankingItem, CompetitionBattle, GroupContribution } from "@/lib/ty
 import { getMemberRanking, getActiveCompetitions, getCompetitionBattle } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import GroupMembersSheet from "@/components/GroupMembersSheet";
+import EndiSpeechBanner from "@/components/EndiSpeechBanner";
 
 const INITIAL_SHOW = 5;
 
@@ -464,6 +465,16 @@ export default function RankingPage() {
     <>
       <div className="min-h-screen bg-background p-4 md:p-8">
         <div className="mx-auto max-w-4xl space-y-6">
+
+          {/* ── 엔디 배너 ── */}
+          <EndiSpeechBanner
+            teamColor={user?.teamColorCode ?? "#a78bfa"}
+            messages={[
+              "현재 개인전 순위를 확인해보세요 🏆",
+              "팀 대항전 현황도 한눈에 볼 수 있어요 🔥",
+              "내 이름이 상위권에 있는지 확인해보세요 💪",
+            ]}
+          />
 
           {/* ── 1. 개인 순위 ── */}
           <Card className="border-border/50 bg-card">

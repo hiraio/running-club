@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.running.club.domain.AdminHistoryDTO;
 import com.running.club.domain.Member;
 import com.running.club.domain.RunningRecordDTO;
 import com.running.club.repository.RunningRecordRepository;
@@ -20,6 +21,21 @@ import lombok.extern.slf4j.Slf4j;
 public class AdminRecordService {
 
     private final RunningRecordRepository runningRecordRepository;
+
+    /**
+     * 처리 완료 기록 히스토리 조회 (APPROVED + REJECTED).
+     * findHistory()에서 approvedBy JOIN FETCH → LazyInitializationException 없음.
+     */
+    @Transactional(readOnly = true)
+    public List<AdminHistoryDTO> getHistory() {
+        log.info("[ADMIN-RECORD-SVC] 처리 완료 기록 히스토리 조회");
+        List<AdminHistoryDTO> result = runningRecordRepository.findHistory()
+                .stream()
+                .map(AdminHistoryDTO::from)
+                .collect(Collectors.toList());
+        log.info("[ADMIN-RECORD-SVC] 히스토리 조회 완료 - 건수={}", result.size());
+        return result;
+    }
 
     // 승인 대기 목록 조회
     @Transactional(readOnly = true)

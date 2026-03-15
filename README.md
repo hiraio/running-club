@@ -84,12 +84,27 @@ JDBC URL: jdbc:h2:file:~/runningdb
 
 ### 사용자 대시보드
 - 목표 거리 설정 + 원형 진행 링 (GoalProgressRing)
+- **주간 활동 바 차트**: 요일별 km 시각화 (recharts), 오늘 하이라이트, 일일 목표 기준선
+- **조 내 기여도 카드**: 내 km / 조 내 순위 / 기여% / 조원 비교 미니 차트
 - 팀 대항전 카드 (내 기여도 %)
 - 내 조 멤버 목록 (km 순 정렬, 이름 클릭 → 프로필)
 - 프로필 편집 모달 (학교/전공/자기소개/목표거리)
 
+### 관리자 승인 히스토리
+- `/admin/history`: 처리 완료(승인/반려) 기록 전체 조회
+- 필터: 날짜 범위 / 이름 검색 / 상태
+- 요약 카드(4종) + 테이블 클릭 → 상세 모달(사진 포함)
+- 클라이언트 페이지네이션 (20건/페이지)
+
+### 엔디(Endi) 마스코트
+- 사이트 마스코트 `public/endi.png` — 파일 교체만으로 전체 반영
+- 홈: `DynamicGreeting` — 대시보드 데이터 기반 개인화 메시지, 4초 자동 순환, 클릭 shake 애니메이션
+- 로그인: 모드(일반/최초/로딩)에 따라 말풍선 메시지 전환
+- 랭킹 · 내 기록 · 마이페이지: 페이지 상단 `EndiSpeechBanner` 배치
+
 ### VIP 최초 로그인
 - 관리자가 미리 등록한 VIP 사용자: 이름+전화로 인증 → loginId/password 설정
+- 회원가입(`/join`) 페이지는 비활성화 — 로그인 없이 접근 시 로그인 페이지로 리다이렉트
 
 ---
 
@@ -168,6 +183,7 @@ JDBC URL: jdbc:h2:file:~/runningdb
 | GET/POST | `/api/admin/teams/{id}/groups` | 조 목록/생성 |
 | PATCH/DELETE | `/api/admin/groups/{id}` | 조 수정/삭제 |
 | GET | `/api/admin/records/waiting` | 승인 대기 기록 |
+| GET | `/api/admin/records/history` | 승인/반려 완료 기록 전체 |
 | PATCH | `/api/admin/records/{id}/approve` | 기록 승인 |
 | PATCH | `/api/admin/records/{id}/reject` | 기록 반려 (`?reason=`) |
 | GET/POST | `/api/admin/notices` | 공지 목록/생성 |
@@ -219,6 +235,18 @@ CREATE TABLE IF NOT EXISTS rank_snapshots (
 ```
 GET /actuator/prometheus
 ```
+
+---
+
+## 접근 제어
+
+로그인하지 않으면 `/login` 외 모든 페이지 접근 불가 (Next.js 미들웨어).
+
+| 경로 | 접근 조건 |
+|------|----------|
+| `/login` | 누구나 (로그인 상태면 홈으로 리다이렉트) |
+| 그 외 모든 경로 | 로그인 필수 |
+| `/admin/**` | ADMIN 전용 |
 
 ---
 

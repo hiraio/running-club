@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { getMyRecords, uploadRecord } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
+import EndiSpeechBanner from "@/components/EndiSpeechBanner";
 import type { RunningRecord } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +59,7 @@ const STATUS_THEME: Record<string, { label: string; badge: string; icon: any; ba
 
 export default function RecordsPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [records, setRecords] = useState<RunningRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -128,6 +131,16 @@ export default function RecordsPage() {
     <div className="min-h-screen bg-[#0c0d10] text-white p-4 pb-24 md:p-8">
       <div className="mx-auto max-w-2xl space-y-6">
         
+        {/* 엔디 배너 */}
+        <EndiSpeechBanner
+          teamColor={user?.teamColorCode ?? "#a78bfa"}
+          messages={[
+            "기록을 올리고 승인된 기록을 확인해보세요 📋",
+            "승인된 기록이 팀 랭킹에 반영돼요 🏆",
+            "오늘도 달리고 기록을 남겨봐요 🏃",
+          ]}
+        />
+
         {/* 헤더 부분 - image_22b69d.png 스타일 반영 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

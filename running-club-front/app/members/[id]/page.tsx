@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { getMemberPublicProfile } from "@/lib/api";
 import type { MemberPublicProfileResponse } from "@/lib/types";
 import GoalProgressRing from "@/components/GoalProgressRing";
+import WeeklyActivityCard from "@/components/WeeklyActivityCard";
 import { motion } from "framer-motion";
 import {
   Trophy, Calendar, Clock, TrendingUp,
@@ -227,7 +228,14 @@ export default function MemberProfilePage() {
           )}
         </motion.div>
 
-        {/* ── 3. 최근 활동 기록 ─────────────────────────────────────── */}
+        {/* ── 3. 주간 활동 차트 ─────────────────────────────────────── */}
+        <WeeklyActivityCard
+          teamColor={teamColor}
+          targetDistance={data.targetDistance}
+          initialRecords={data.recentRecords}
+        />
+
+        {/* ── 4. 최근 활동 기록 ─────────────────────────────────────── */}
         <motion.div
           className="rounded-2xl border border-white/5 bg-card shadow-xl"
           initial={{ opacity: 0, y: 20 }}
