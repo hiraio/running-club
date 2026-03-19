@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { RankingItem, CompetitionBattle, GroupContribution } from "@/lib/types";
-import { getMemberRanking, getActiveCompetitions, getCompetitionBattle } from "@/lib/api";
+import { getMemberRanking, getCompetitionBattle } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import GroupMembersSheet from "@/components/GroupMembersSheet";
 import EndiSpeechBanner from "@/components/EndiSpeechBanner";
@@ -450,13 +450,8 @@ export default function RankingPage() {
     // 배틀 데이터 fetch
     getCompetitionBattle().then(setBattle).catch(() => {}).finally(() => setIsBattleLoading(false));
 
-    // 활성 대회 ID를 먼저 조회 → 해당 대회 기준으로 개인 순위 fetch (rankChange 포함)
-    // competitionId 없이 호출하면 백엔드에서 rankChange를 주입하지 않음
-    getActiveCompetitions()
-      .then((res) => {
-        const activeId = res.success && res.data.length > 0 ? res.data[0].id : undefined;
-        return getMemberRanking(activeId);
-      })
+    // 개인 순위: 전 기간 누적 (competitionId 없이 호출)
+    getMemberRanking()
       .then(setRankings)
       .finally(() => setIsRankingLoading(false));
   }, []);
