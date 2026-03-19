@@ -435,7 +435,7 @@ export default function RankingPage() {
   // 조 멤버 Sheet 상태
   const [selectedGroup, setSelectedGroup] = useState<{ groupId: number; groupName: string; colorCode: string | null } | null>(null);
 
-  const myMemberId = user?.id;
+  const myMemberId = user?.id ?? undefined;
 
   const handleMemberClick = (memberId: number, isMe: boolean) => {
     if (isMe) { router.push("/dashboard"); return; }

@@ -358,7 +358,7 @@ export default function DashboardPage() {
               teamColor={teamColor}
               groupName={data.groupName}
               groupMembers={groupMembers}
-              userId={user!.id}
+              userId={user!.id!}
             />
           )}
 
