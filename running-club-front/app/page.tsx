@@ -3,10 +3,20 @@ import { BattleCard } from "@/components/BattleCard";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { DynamicGreeting } from "@/components/DynamicGreeting";
 
+/**
+ * Server Component는 Vercel rewrites를 타지 않으므로 백엔드 직접 호출.
+ * 로컬: NEXT_PUBLIC_API_URL=http://localhost:8080 (.env.local)
+ * 운영: 하드코딩 폴백 (Vercel에서 NEXT_PUBLIC_API_URL 삭제됨)
+ */
+const SERVER_API =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.API_BACKEND_URL ||
+  "https://nd-running-club.duckdns.org";
+
 async function getBattleData(): Promise<CompetitionBattle | null> {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}/api/competitions/active/battle`,
+      `${SERVER_API}/api/competitions/active/battle`,
       { cache: "no-store" }
     );
     if (!res.ok) return null;
