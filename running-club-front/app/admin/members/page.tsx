@@ -354,8 +354,8 @@ export default function AdminMembersPage() {
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [members, teamFilter]);
 
-  const handleTeamFilterChange = (val: string) => {
-    setTeamFilter(val);
+  const handleTeamFilterChange = (val: string | null) => {
+    setTeamFilter(val ?? "ALL");
     setGroupFilter("ALL");
   };
 
@@ -457,7 +457,7 @@ export default function AdminMembersPage() {
           </SelectContent>
         </Select>
         {teamFilter !== "ALL" && filterGroups.length > 0 && (
-          <Select value={groupFilter} onValueChange={setGroupFilter}>
+          <Select value={groupFilter} onValueChange={(v) => setGroupFilter(v ?? "ALL")}>
             <SelectTrigger className="w-28 h-10 text-xs bg-secondary border-border/50">
               <SelectValue placeholder="조 선택" />
             </SelectTrigger>
