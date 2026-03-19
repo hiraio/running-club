@@ -37,7 +37,7 @@ import type {
 // 설정
 // ============================================================
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 /**
  * 사진 URL이 상대경로(/photos/...)인 경우 백엔드 BASE URL을 붙여 절대경로로 변환.

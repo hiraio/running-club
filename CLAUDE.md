@@ -244,7 +244,7 @@ interface AuthUser {
 | 프론트엔드 | Vercel (https://running-club-iota.vercel.app) | **배포 완료** |
 | DB | Supabase PostgreSQL | **데이터 삽입 완료** |
 | 도메인 | DuckDNS (nd-running-club.duckdns.org) | 설정 완료 (217.142.231.239) |
-| HTTPS | Let's Encrypt (Certbot + Nginx) | 미설정 |
+| HTTPS | Let's Encrypt (Certbot + Nginx) | **설정 완료** |
 
 ### Oracle VM 정보
 - **Public IP**: 217.142.231.239
@@ -268,8 +268,8 @@ ssh nd-running
 # 직접 접속
 ssh -i C:/sshkey/ssh.key ubuntu@217.142.231.239
 
-# Oracle Cloud Shell (브라우저 터미널) → 내부IP 사용
-ssh -i ~/ssh.key ubuntu@10.0.0.59
+# Oracle Cloud Shell (브라우저 터미널) → 외부IP 사용
+chmod 600 ~/ssh.key && ssh -i ~/ssh.key ubuntu@217.142.231.239
 ```
 
 > ⚠️ 기숙사 LAN에서는 포트 22 차단됨 → 핫스팟 사용 필요
@@ -294,12 +294,9 @@ ssh -i ~/ssh.key ubuntu@10.0.0.59
 ✅ 4. .env 파일 작성
 ✅ 5. systemd 서비스 등록 (nd-running.service)
 ✅ 6. DuckDNS 도메인 설정 (nd-running-club.duckdns.org)
-⬜ 7. Nginx 설치 + 리버스 프록시
-⬜ 8. Certbot HTTPS
+✅ 7. Nginx 리버스 프록시 (443→8080, /photos/ alias)
+✅ 8. Certbot HTTPS (Let's Encrypt, 자동 갱신)
 ```
-
-> ⚠️ HTTPS 미설정 상태 — 현재 CORS 에러 발생 중 (CORS_ALLOWED_ORIGIN 환경변수 수정 필요)
-> `.env`의 `CORS_ALLOWED_ORIGIN=https://running-club-iota.vercel.app` 으로 설정 후 재시작 필요
 
 ### .env 파일 위치 (Oracle VM)
 ```
