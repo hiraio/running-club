@@ -48,22 +48,17 @@ public class RunningRecordService {
     public void uploadRecord(Member member, Double distance, Integer duration,
                              LocalDate runningDate, String comment, MultipartFile file) throws Exception {
 
-        log.info("[RECORD-SVC] 기록 업로드 시작 - memberId={}, distance={}km, duration={}s, runningDate={}",
-                member.getId(), distance, duration, runningDate);
-
         // 1. 이미지 해시 추출 및 중복 체크
         String hash = FileUtil.getSHA256Hash(file);
-        log.info("[RECORD-SVC] 사진 해시 생성 - hash={}", hash);
         if (runningRecordRepository.existsByPhotoHash(hash)) {
-            log.warn("[RECORD-SVC] 중복 사진 감지 - memberId={}, hash={}", member.getId(), hash);
+            log.warn("[RECORD] 중복 사진 거부 - memberId={}", member.getId());
             throw new IllegalStateException("이미 업로드된 사진입니다. (중복 인증 방지)");
         }
 
         // 2. 물리적 한계 체크 (시속 45km 초과 시 거부)
         double speedKmh = distance / (duration / 3600.0);
-        log.info("[RECORD-SVC] 속도 검증 - speedKmh={}", String.format("%.2f", speedKmh));
         if (speedKmh > 45.0) {
-            log.warn("[RECORD-SVC] 비정상 속도 감지 - memberId={}, speedKmh={}", member.getId(), String.format("%.2f", speedKmh));
+            log.warn("[RECORD] 비정상 속도 거부 - memberId={}, speedKmh={:.2f}", member.getId(), speedKmh);
             throw new IllegalArgumentException("페이스가 비정상적으로 빠릅니다. (시속 " + String.format("%.2f", speedKmh) + "km/h)");
         }
 
@@ -74,14 +69,12 @@ public class RunningRecordService {
                     .map(Team::getCompetition)
                     .orElse(null);
         }
-        log.info("[RECORD-SVC] 대회 도출 - competitionId={}", competition != null ? competition.getId() : "없음");
 
         // 4. 실제 디스크 저장
         String relativeUrl = FileUtil.saveFile(file, uploadDir);
         String photoUrl = (serverBaseUrl == null || serverBaseUrl.isBlank())
                 ? relativeUrl
                 : serverBaseUrl + relativeUrl;
-        log.info("[RECORD-SVC] 사진 저장 완료 - photoUrl={}", photoUrl);
 
         RunningRecord record = RunningRecord.builder()
                 .member(member)
@@ -95,27 +88,22 @@ public class RunningRecordService {
                 .build();
 
         runningRecordRepository.save(record);
-        log.info("[RECORD-SVC] 기록 저장 완료 - memberId={}", member.getId());
+        log.info("[RECORD] 업로드 - memberId={}, distance={}km, competitionId={}",
+                member.getId(), distance, competition != null ? competition.getId() : "없음");
     }
 
     public List<RunningRecordDTO> getMyRecords(Member member) {
-        log.info("[RECORD-SVC] 내 기록 조회 - memberId={}", member.getId());
-        List<RunningRecordDTO> result = runningRecordRepository.findByMember(member)
+        return runningRecordRepository.findByMember(member)
                 .stream()
                 .map(RunningRecordDTO::from)
                 .collect(Collectors.toList());
-        log.info("[RECORD-SVC] 내 기록 조회 완료 - memberId={}, 건수={}", member.getId(), result.size());
-        return result;
     }
 
     public List<RunningRecordDTO> getRecordsByTeamId(Integer teamId) {
-        log.info("[RECORD-SVC] 팀 기록 조회 - teamId={}", teamId);
-        List<RunningRecordDTO> result = runningRecordRepository.findByTeamId(teamId)
+        return runningRecordRepository.findByTeamId(teamId)
                 .stream()
                 .map(RunningRecordDTO::from)
                 .collect(Collectors.toList());
-        log.info("[RECORD-SVC] 팀 기록 조회 완료 - teamId={}, 건수={}", teamId, result.size());
-        return result;
     }
 
     /**
@@ -125,7 +113,6 @@ public class RunningRecordService {
      * - risingStar : 이번 주 vs 지난 주 성장률 1위 (양쪽 기록 있는 멤버만 대상, 없으면 null)
      */
     public RecentFeedResponse getRecentFeed() {
-        log.info("[RECORD-SVC] 활동 피드 조회 시작");
 
         // 1. 최신 피드 (최대 10건)
         List<RunningRecord> latest = runningRecordRepository
@@ -197,10 +184,6 @@ public class RunningRecordService {
             }
         }
 
-        log.info("[RECORD-SVC] 활동 피드 조회 완료 - 피드{}건, dailyKing={}, risingStar={}",
-                feedItems.size(),
-                dailyKing != null ? dailyKing.getUserName() : "없음",
-                risingStar != null ? risingStar.getUserName() : "없음");
 
         return RecentFeedResponse.builder()
                 .records(feedItems)
@@ -210,18 +193,11 @@ public class RunningRecordService {
     }
 
     public List<RunningRecordDTO> getRecordsByGroupId(Integer groupId) {
-        log.info("[RECORD-SVC] 조 기록 조회 - groupId={}", groupId);
         runningGroupRepository.findByGroupId(groupId)
-                .orElseThrow(() -> {
-                    log.warn("[RECORD-SVC] 조 없음 - groupId={}", groupId);
-                    return new IllegalArgumentException("존재하지 않는 조입니다. (id=" + groupId + ")");
-                });
-
-        List<RunningRecordDTO> result = runningRecordRepository.findByGroupId(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 조입니다. (id=" + groupId + ")"));
+        return runningRecordRepository.findByGroupId(groupId)
                 .stream()
                 .map(RunningRecordDTO::from)
                 .collect(Collectors.toList());
-        log.info("[RECORD-SVC] 조 기록 조회 완료 - groupId={}, 건수={}", groupId, result.size());
-        return result;
     }
 }

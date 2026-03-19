@@ -30,4 +30,7 @@ public interface MemberRepository extends JpaRepository<Member, Integer> {
 
     @Query("SELECT m FROM Member m LEFT JOIN FETCH m.runningGroup LEFT JOIN FETCH m.team WHERE m.runningGroup.id = :groupId")
     List<Member> findByGroupId(@Param("groupId") Integer groupId);
+
+    @Query("SELECT m FROM Member m LEFT JOIN FETCH m.team LEFT JOIN FETCH m.runningGroup ORDER BY m.name ASC")
+    List<Member> findAllWithTeamAndGroup();
 }

@@ -7,6 +7,7 @@ import type {
   MemberDashboardData,
   MemberPublicProfileResponse,
   AdminHistoryDTO,
+  AdminMemberItem,
   GroupMemberDTO,
   CompetitionForJoin,
   TeamForJoin,
@@ -37,6 +38,16 @@ import type {
 // ============================================================
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+
+/**
+ * 사진 URL이 상대경로(/photos/...)인 경우 백엔드 BASE URL을 붙여 절대경로로 변환.
+ * 이미 절대경로(http/https)면 그대로 반환.
+ */
+export function resolvePhotoUrl(url: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${BASE}${url}`;
+}
 
 /**
  * 모든 fetch에 기본으로 붙는 옵션.
@@ -599,6 +610,23 @@ export const deleteGroup = async (groupId: number): Promise<string> => {
  * 처리 완료 기록 히스토리 (APPROVED + REJECTED, 최신순).
  * 날짜·이름·상태 필터링은 프론트에서 처리.
  */
+/** GET /api/admin/members — 전체 회원 목록 (팀/조 포함) */
+export const getAdminMembers = async (): Promise<AdminMemberItem[]> => {
+  const res = await fetch(`${BASE}/api/admin/members`, DEFAULT_OPTS);
+  if (!res.ok) await handleError(res);
+  return res.json();
+};
+
+/** PATCH /api/admin/members/{id}/assign — 팀/조 배정 (null = 해제) */
+export const assignMember = async (
+  memberId: number,
+  body: { teamId: number | null; groupId: number | null }
+): Promise<AdminMemberItem> => {
+  const res = await jsonRequest("PATCH", `${BASE}/api/admin/members/${memberId}/assign`, body);
+  if (!res.ok) await handleError(res);
+  return res.json();
+};
+
 export const getApprovalHistory = async (): Promise<AdminHistoryDTO[]> => {
   const res = await fetch(`${BASE}/api/admin/records/history`, DEFAULT_OPTS);
   if (!res.ok) await handleError(res);

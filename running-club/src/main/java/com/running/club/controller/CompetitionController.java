@@ -17,7 +17,6 @@ import com.running.club.service.CompetitionBattleService;
 import com.running.club.service.PublicCompetitionService;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * 회원가입 지원 공개 조회 컨트롤러.
@@ -27,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
  * 클래스 레벨 @RequestMapping 없이 각 메서드에 전체 경로를 명시.
  * 모든 응답은 ApiResponse<T>로 일관성 유지.
  */
-@Slf4j
 @RestController
 @RequiredArgsConstructor
 public class CompetitionController {
@@ -35,39 +33,22 @@ public class CompetitionController {
     private final PublicCompetitionService   publicCompetitionService;
     private final CompetitionBattleService   competitionBattleService;
 
-    /**
-     * 전체 대회 목록 (상태 무관, 인증 불필요).
-     * 대회 목록 페이지에서 PROCEEDING/READY/FINISHED 모두 표시.
-     */
+    /** 전체 대회 목록 (상태 무관, 인증 불필요) */
     @GetMapping("/api/competitions")
     public ResponseEntity<ApiResponse<List<CompetitionSummaryDTO>>> getAllCompetitions() {
-        log.info("[COMPETITION] 전체 대회 목록 조회 요청");
-        List<CompetitionSummaryDTO> result = publicCompetitionService.getAllCompetitions();
-        return ResponseEntity.ok(ApiResponse.ok(result));
+        return ResponseEntity.ok(ApiResponse.ok(publicCompetitionService.getAllCompetitions()));
     }
 
-    /**
-     * 대회 현황 배틀 데이터 (인증 불필요).
-     * 팀 배틀 현황 + 조별 기여도 + 오늘의 MVP를 단일 호출로 반환.
-     * /api/competitions/** permitAll 적용됨.
-     */
+    /** 대회 현황 배틀 데이터 — 팀 배틀 현황 + 조별 기여도 + 오늘의 MVP */
     @GetMapping("/api/competitions/active/battle")
     public ResponseEntity<CompetitionBattleResponse> getActiveBattle() {
-        log.info("[COMPETITION] 대회 현황 배틀 조회 요청");
-        CompetitionBattleResponse result = competitionBattleService.getActiveBattle();
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(competitionBattleService.getActiveBattle());
     }
 
-    /**
-     * 활성 대회 목록 조회.
-     * 빈 리스트도 success=true로 반환 — 프론트에서 "등록된 대회 없음" UI 처리.
-     */
+    /** 활성 대회 목록 (PROCEEDING / READY) */
     @GetMapping("/api/competitions/active")
     public ResponseEntity<ApiResponse<List<CompetitionForJoinDTO>>> getActiveCompetitions() {
-        log.info("[COMPETITION] 활성 대회 목록 조회 요청");
-        List<CompetitionForJoinDTO> result = publicCompetitionService.getActiveCompetitions();
-        log.info("[COMPETITION] 활성 대회 목록 조회 완료 - 건수={}", result.size());
-        return ResponseEntity.ok(ApiResponse.ok(result));
+        return ResponseEntity.ok(ApiResponse.ok(publicCompetitionService.getActiveCompetitions()));
     }
 
     /**
@@ -77,36 +58,20 @@ public class CompetitionController {
     @GetMapping("/api/competitions/{competitionId}/teams")
     public ResponseEntity<ApiResponse<List<TeamForJoinDTO>>> getTeams(
             @PathVariable Integer competitionId) {
-        log.info("[COMPETITION] 대회 팀 목록 조회 요청 - competitionId={}", competitionId);
-        List<TeamForJoinDTO> result = publicCompetitionService.getTeamsByCompetition(competitionId);
-        log.info("[COMPETITION] 대회 팀 목록 조회 완료 - competitionId={}, 건수={}", competitionId, result.size());
-        return ResponseEntity.ok(ApiResponse.ok(result));
+        return ResponseEntity.ok(ApiResponse.ok(publicCompetitionService.getTeamsByCompetition(competitionId)));
     }
 
-    /**
-     * 특정 대회의 전체 조 목록 조회 (팀명 포함).
-     * 회원가입 시 대회 선택 후 조를 바로 선택하는 단계에서 사용.
-     */
+    /** 특정 대회의 전체 조 목록 조회 (팀명 포함) */
     @GetMapping("/api/competitions/{competitionId}/groups")
     public ResponseEntity<ApiResponse<List<GroupForJoinDTO>>> getGroupsByCompetition(
             @PathVariable Integer competitionId) {
-        log.info("[COMPETITION] 대회 조 목록 조회 요청 - competitionId={}", competitionId);
-        List<GroupForJoinDTO> result = publicCompetitionService.getGroupsByCompetition(competitionId);
-        log.info("[COMPETITION] 대회 조 목록 조회 완료 - 건수={}", result.size());
-        return ResponseEntity.ok(ApiResponse.ok(result));
+        return ResponseEntity.ok(ApiResponse.ok(publicCompetitionService.getGroupsByCompetition(competitionId)));
     }
 
-    /**
-     * 특정 팀의 조 목록 조회.
-     * 빈 리스트 → success=true, data=[] 반환 (조 미구성 상태, 정상)
-     * 존재하지 않는 teamId → GlobalExceptionHandler가 400 ApiResponse로 변환.
-     */
+    /** 특정 팀의 조 목록 조회 */
     @GetMapping("/api/teams/{teamId}/groups")
     public ResponseEntity<ApiResponse<List<GroupForJoinDTO>>> getGroups(
             @PathVariable Integer teamId) {
-        log.info("[COMPETITION] 팀 조 목록 조회 요청 - teamId={}", teamId);
-        List<GroupForJoinDTO> result = publicCompetitionService.getGroupsByTeam(teamId);
-        log.info("[COMPETITION] 팀 조 목록 조회 완료 - teamId={}, 건수={}", teamId, result.size());
-        return ResponseEntity.ok(ApiResponse.ok(result));
+        return ResponseEntity.ok(ApiResponse.ok(publicCompetitionService.getGroupsByTeam(teamId)));
     }
 }

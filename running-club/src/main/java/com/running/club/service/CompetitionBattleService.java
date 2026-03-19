@@ -35,8 +35,6 @@ public class CompetitionBattleService {
      * PROCEEDING 상태 우선, 없으면 READY 상태 대회를 사용.
      */
     public CompetitionBattleResponse getActiveBattle() {
-        log.info("[BATTLE] 대회 현황 조회 시작");
-
         // 1. 진행 중인 대회 선택 (PROCEEDING > READY)
         Competition competition = competitionRepository.findAll().stream()
                 .filter(c -> {
@@ -48,8 +46,6 @@ public class CompetitionBattleService {
                         CompetitionStatus.of(c.getStartDate(), c.getEndDate(), c.getIsActive())
                                 == CompetitionStatus.PROCEEDING ? 0 : 1))
                 .orElseThrow(() -> new IllegalStateException("현재 진행 중인 대회가 없습니다."));
-
-        log.info("[BATTLE] 대회 선택 - id={}, title={}", competition.getId(), competition.getTitle());
 
         // 2. 팀 배틀 데이터 (서브쿼리로 실시간 totalKm 집계 포함)
         List<TeamSummaryDTO> teams = teamRepository
@@ -88,10 +84,6 @@ public class CompetitionBattleService {
         long daysUntilStart = status == CompetitionStatus.READY
                 ? ChronoUnit.DAYS.between(LocalDate.now(), competition.getStartDate())
                 : 0L;
-
-        log.info("[BATTLE] 조회 완료 - status={}, teams={}, groups={}, mvp={}, daysRemaining={}, daysUntilStart={}",
-                status, teams.size(), groups.size(),
-                todayMvp != null ? todayMvp.getName() : "없음", daysRemaining, daysUntilStart);
 
         return CompetitionBattleResponse.builder()
                 .competitionId(competition.getId())

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getWaitingRecords, approveRecord, rejectRecord } from "@/lib/api";
+import { getWaitingRecords, approveRecord, rejectRecord, resolvePhotoUrl } from "@/lib/api";
 import type { RunningRecord } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -101,11 +101,11 @@ function RecordCard({
             <button
               type="button"
               className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary focus:outline-none"
-              onClick={() => onPhotoClick(record.photoUrl!)}
+              onClick={() => onPhotoClick(resolvePhotoUrl(record.photoUrl)!)}
               title="사진 크게 보기"
             >
               <img
-                src={record.photoUrl}
+                src={resolvePhotoUrl(record.photoUrl)!}
                 alt="러닝 사진"
                 className="h-full w-full object-cover transition-transform group-hover:scale-105"
               />

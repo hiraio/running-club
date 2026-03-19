@@ -61,4 +61,18 @@ public class Member {
         this.loginId = loginId;
         this.password = encodedPassword;
     }
+
+    /** 관리자 팀/조 배정. null 전달 시 해제 */
+    public void assignTeamAndGroup(Team team, RunningGroup group) {
+        this.team = team;
+        this.runningGroup = group;
+    }
+
+    /** first_login_candidates 통과 후 실제 멤버 생성 */
+    public static Member createFromCandidate(String name, String phone) {
+        return Member.builder()
+                .name(name)
+                .phone(phone)
+                .build();
+    }
 }

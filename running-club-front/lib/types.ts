@@ -77,8 +77,8 @@ export interface GroupForJoin {
 
 /** GET /api/me 응답 */
 export interface AuthUser {
-  id: number;
-  loginId: string | null; // 계정 설정 전 VIP 사용자는 null
+  id: number | null;      // 최초 로그인 후 계정 설정 전까지 null
+  loginId: string | null; // 계정 설정 전은 null
   name: string;
   role: "USER" | "ADMIN";
   needsSetup: boolean;       // true이면 /setup-account로 리다이렉트 필요
@@ -450,6 +450,25 @@ export interface MemberPublicProfileResponse {
   memberRank: number;
   /** 최근 APPROVED 기록 최대 5건 (날짜 내림차순) */
   recentRecords: RunningRecord[];
+}
+
+// ============================================================
+// 관리자 — 회원 관리
+// ============================================================
+
+/** GET /api/admin/members 응답 배열의 각 항목 */
+export interface AdminMemberItem {
+  id: number;
+  loginId: string | null;
+  name: string;
+  phone: string | null;
+  role: "USER" | "ADMIN";
+  teamId: number | null;
+  teamName: string | null;
+  groupId: number | null;
+  groupName: string | null;
+  needsSetup: boolean;
+  createdAt: string | null; // ISO datetime
 }
 
 /**

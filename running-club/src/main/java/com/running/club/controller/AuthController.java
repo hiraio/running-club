@@ -1,6 +1,5 @@
 package com.running.club.controller;
 
-import com.running.club.domain.CustomUserDetails;
 import com.running.club.domain.FirstLoginRequest;
 import com.running.club.domain.LoginRequest;
 import com.running.club.domain.MeResponse;
@@ -11,7 +10,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,10 +30,9 @@ public class AuthController {
     @PostMapping("/first-login")
     public ResponseEntity<MeResponse> firstLogin(
             @RequestBody FirstLoginRequest request,
-            HttpServletRequest httpRequest,
-            HttpServletResponse httpResponse) {
+            HttpServletRequest httpRequest) {
         log.info("[AUTH-CTL] 최초 로그인 요청 - name={}", request.getName());
-        MeResponse me = authService.firstLogin(request.getName(), request.getPhone(), httpRequest, httpResponse);
+        MeResponse me = authService.firstLogin(request.getName(), request.getPhone(), httpRequest);
         return ResponseEntity.ok(me);
     }
 
@@ -60,10 +57,11 @@ public class AuthController {
     @PostMapping("/setup-account")
     public ResponseEntity<MeResponse> setupAccount(
             @RequestBody SetupAccountRequest request,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        log.info("[AUTH-CTL] 계정 설정 요청 - memberId={}", userDetails.getMember().getId());
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+        log.info("[AUTH-CTL] 계정 설정 요청 - loginId={}", request.getLoginId());
         MeResponse me = authService.setupAccount(
-                request.getLoginId(), request.getPassword(), userDetails.getMember().getId());
+                request.getLoginId(), request.getPassword(), httpRequest, httpResponse);
         return ResponseEntity.ok(me);
     }
 }

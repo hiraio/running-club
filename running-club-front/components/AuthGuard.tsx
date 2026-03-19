@@ -15,7 +15,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     // 로그인 페이지 — 이미 로그인 상태면 역할별 홈으로
     if (pathname === "/login") {
       if (user) {
-        router.replace(user.role === "ADMIN" ? "/admin" : "/dashboard");
+        if (user.needsSetup) {
+          router.replace("/setup-account");
+        } else {
+          router.replace(user.role === "ADMIN" ? "/admin" : "/dashboard");
+        }
       }
       return;
     }

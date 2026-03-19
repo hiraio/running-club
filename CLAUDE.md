@@ -40,14 +40,23 @@ Competition → Team → RunningGroup → Member → RunningRecord
 | 방식 | 엔드포인트 |
 |------|-----------|
 | 일반 로그인 | `POST /api/auth/login` (JSON: loginId+password) |
-| 최초 로그인 | `POST /api/auth/first-login` (이름+전화, VIP 전용) |
-| 계정 설정 | `POST /api/auth/setup-account` (인증 세션 필요) |
+| 최초 로그인 | `POST /api/auth/first-login` (이름+전화 → 세션 저장만, DB 쓰기 없음) |
+| 계정 설정 | `POST /api/auth/setup-account` (세션 필요 — candidate 소진 + member 생성 원자적 처리) |
 | 내 정보 | `GET /api/me` |
 | 로그아웃 | `POST /logout` → 200 반환 (302 redirect 방지) |
 
+### 최초 로그인 플로우 (first_login_candidates)
+```
+first_login_candidates 테이블: id, name, phone, is_used, created_at
+  ↓ firstLogin(): 이름+전화 검증 → 세션에 name/phone 저장 (DB 쓰기 없음)
+  ↓ setupAccount(): 세션에서 name/phone 읽기 → candidate.markUsed() + Member 생성 + loginId/pw 설정 (1 트랜잭션)
+```
+- 중간에 창 닫아도 is_used=false 유지 → 재시도 가능
+- Supabase SQL: `CREATE TABLE first_login_candidates (id BIGSERIAL PRIMARY KEY, name VARCHAR NOT NULL, phone VARCHAR(20) NOT NULL, is_used BOOLEAN NOT NULL DEFAULT false, created_at TIMESTAMP DEFAULT NOW());`
+
 ### ⚠️ 주의사항
 
-- **loginId NULL 허용**: VIP 사용자는 loginId/password=null. `needsSetup=true`이면 `/setup-account` 강제 이동
+- **members.loginId**: 최초 로그인 사용자도 setupAccount 완료 후 NOT NULL. first_login_candidates에 있는 동안만 미생성
 - **CustomUserDetails**: `getAuthorities()`는 `new SimpleGrantedAuthority(role)` — 람다 금지 (Serializable 미구현)
 - **formLogin 병존**: JSON 로그인(`/api/auth/login`)과 form login(`/login`)이 공존 중. Postman 테스트 시 `Content-Type: application/json`
 - **CORS**: `WebConfig` — `allowedOrigins: http://localhost:3000`, OPTIONS 전체 허용
@@ -56,7 +65,7 @@ Competition → Team → RunningGroup → Member → RunningRecord
 ### SecurityConfig permitAll 경로
 ```
 OPTIONS /**, /h2-console/**, /join, /login, /photos/**
-/api/auth/first-login, /api/auth/login
+/api/auth/first-login, /api/auth/login, /api/auth/setup-account
 /api/records/team/**, /api/records/group/**, /api/records/recent
 /api/ranking/**, /api/competitions/**, /api/teams/**
 /api/notices/**
@@ -115,7 +124,10 @@ app/ranking/              랭킹 — 탭 없이 수직 구조:
                           이름 클릭(남) → /members/{id}, 이름 클릭(나) → /dashboard
                           조 기여도 카드 (n명) 클릭 → GroupMembersSheet
 app/notices/              공지사항 (공개)
-app/admin/                관리자 (기록승인/대회관리/공지관리)
+app/admin/                관리자 (기록승인/대회관리/공지관리/회원관리)
+app/admin/members/        회원 관리 — 미배정 우선 정렬, 이름/아이디 검색, 팀·조 필터
+                          행 클릭 또는 "배정" 버튼 → AssignSheet
+                          AssignSheet: 활성 대회 자동선택, 팀 컬러 버튼, 조 캐스케이드, 낙관적 업데이트
 app/admin/history/        승인 히스토리 — 날짜범위/이름/상태 필터, 요약 4카드
                           테이블 클릭 → 상세 모달(사진 포함), 클라이언트 페이지네이션 20건/페이지
 
@@ -175,7 +187,7 @@ interface AuthUser {
 
 | 경로 | 조건 |
 |------|------|
-| `/login` | 로그인 상태면 역할별 홈으로 리다이렉트 |
+| `/login` | 로그인 상태 + needsSetup=true → `/setup-account`, 그 외 → 역할별 홈 |
 | **그 외 모든 경로** | 로그인 필수 — 미인증 시 `/login` 리다이렉트 |
 | `/admin/**` | ADMIN 필요, USER → `/dashboard` |
 | ADMIN이 `/admin` 외 접근 | → `/admin` 리다이렉트 |
@@ -197,7 +209,7 @@ interface AuthUser {
 
 **인증**: `/join`, `/api/auth/login`, `/api/auth/first-login`, `/api/auth/setup-account`, `/api/me`, `/logout`
 
-**관리자**: `/api/admin/competitions/**`, `/api/admin/teams/**`, `/api/admin/groups/**`, `/api/admin/records/{id}/approve|reject`, `/api/admin/notices/**`
+**관리자**: `/api/admin/competitions/**`, `/api/admin/teams/**`, `/api/admin/groups/**`, `/api/admin/records/{id}/approve|reject`, `/api/admin/notices/**`, `/api/admin/members` (GET), `/api/admin/members/{id}/assign` (PATCH)
 
 **공개**: `/api/competitions` (전체 목록), `/api/competitions/active`, `/api/competitions/active/battle`, `/api/competitions/{id}/teams`, `/api/teams/{id}/groups`, `/api/ranking/teams|groups|members`, `/api/records/team/**`, `/api/records/group/**`, `/api/records/recent`, `/api/notices/**`
 
@@ -216,7 +228,7 @@ interface AuthUser {
 ---
 
 ## 미구현
-- 관리자 회원 관리
+- first_login_candidates 관리 UI (관리자가 최초 로그인 후보를 직접 등록하는 화면 — 현재는 Supabase에서 직접 INSERT)
 
 ## 모니터링
 `GET /actuator/prometheus`
@@ -228,10 +240,10 @@ interface AuthUser {
 ### 인프라 구성
 | 역할 | 서비스 | 상태 |
 |------|--------|------|
-| 백엔드 | Oracle Cloud Always Free (VM.Standard.E2.1.Micro, ap-osaka-1) | 세팅 중 |
-| 프론트엔드 | Vercel | **배포 완료** |
-| DB | Supabase PostgreSQL | 스키마 완료 |
-| 도메인 | DuckDNS (nd-running.duckdns.org) | 미설정 |
+| 백엔드 | Oracle Cloud Always Free (VM.Standard.E2.1.Micro, ap-osaka-1) | **운영 중** (systemd) |
+| 프론트엔드 | Vercel (https://running-club-iota.vercel.app) | **배포 완료** |
+| DB | Supabase PostgreSQL | **데이터 삽입 완료** |
+| 도메인 | DuckDNS (nd-running-club.duckdns.org) | 설정 완료 (217.142.231.239) |
 | HTTPS | Let's Encrypt (Certbot + Nginx) | 미설정 |
 
 ### Oracle VM 정보
@@ -267,22 +279,27 @@ ssh -i ~/ssh.key ubuntu@10.0.0.59
 
 모노레포 구조이므로 Import 시 반드시 아래 순서대로 설정:
 1. Root Directory → `running-club-front` 먼저 입력 (입력 후 Next.js 자동 감지됨)
-2. Environment Variables → `NEXT_PUBLIC_API_URL = http://217.142.231.239:8080`
+2. Environment Variables → `NEXT_PUBLIC_API_URL = https://nd-running-club.duckdns.org`
+
+> ⚠️ `http://` IP 직접 사용 시 Mixed Content 에러 — Vercel(HTTPS)에서 HTTP API 호출 차단됨
 
 > ⚠️ Root Directory 미설정 시 Vercel이 레포 루트를 빌드하려다 Next.js 감지 실패 → 404
 > ⚠️ `next/font/google` import 금지 — Edge Runtime에서 `__dirname is not defined` 에러 발생 → JS 청크 로드 실패 → SyntaxError
 
-### Oracle VM 세팅 남은 순서
+### Oracle VM 세팅 완료 항목
 ```
-1. Cloud Shell → SSH(내부IP) → iptables 열기 (22/80/443/8080)
-2. Java 17 설치
-3. git clone + mvn build (prod 프로필)
-4. .env 파일 작성 (DB_URL, DB_USERNAME, DB_PASSWORD, CORS_ALLOWED_ORIGIN)
-5. systemd 서비스 등록
-6. DuckDNS 도메인 설정
-7. Nginx 설치 + 리버스 프록시
-8. Certbot HTTPS
+✅ 1. iptables 열기 (22/80/443/8080)
+✅ 2. Java 17 설치
+✅ 3. git clone + mvn build (prod 프로필)
+✅ 4. .env 파일 작성
+✅ 5. systemd 서비스 등록 (nd-running.service)
+✅ 6. DuckDNS 도메인 설정 (nd-running-club.duckdns.org)
+⬜ 7. Nginx 설치 + 리버스 프록시
+⬜ 8. Certbot HTTPS
 ```
+
+> ⚠️ HTTPS 미설정 상태 — 현재 CORS 에러 발생 중 (CORS_ALLOWED_ORIGIN 환경변수 수정 필요)
+> `.env`의 `CORS_ALLOWED_ORIGIN=https://running-club-iota.vercel.app` 으로 설정 후 재시작 필요
 
 ### .env 파일 위치 (Oracle VM)
 ```
@@ -293,7 +310,7 @@ ssh -i ~/ssh.key ubuntu@10.0.0.59
 DB_URL=jdbc:postgresql://...supabase.co:5432/postgres
 DB_USERNAME=postgres
 DB_PASSWORD=...
-CORS_ALLOWED_ORIGIN=https://[vercel-domain].vercel.app
+CORS_ALLOWED_ORIGIN=https://running-club-iota.vercel.app
 SPRING_PROFILES_ACTIVE=prod
 ```
 

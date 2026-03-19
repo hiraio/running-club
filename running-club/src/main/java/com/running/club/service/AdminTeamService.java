@@ -42,16 +42,9 @@ public class AdminTeamService {
 
     /** 대회 내 팀 목록 조회 (그룹 수 포함) */
     public List<TeamSummaryDTO> getTeamsByCompetition(Integer competitionId) {
-        log.info("[TEAM-SVC] 팀 목록 조회 - competitionId={}", competitionId);
         competitionRepository.findByCompetitionId(competitionId)
-                .orElseThrow(() -> {
-                    log.warn("[TEAM-SVC] 대회 없음 - competitionId={}", competitionId);
-                    return new IllegalArgumentException("존재하지 않는 대회입니다. (id=" + competitionId + ")");
-                });
-
-        List<TeamSummaryDTO> result = teamRepository.findAllByCompetitionIdWithGroupCount(competitionId);
-        log.info("[TEAM-SVC] 팀 목록 조회 완료 - competitionId={}, 건수={}", competitionId, result.size());
-        return result;
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 대회입니다. (id=" + competitionId + ")"));
+        return teamRepository.findAllByCompetitionIdWithGroupCount(competitionId);
     }
 
     /** 팀 생성 */
@@ -126,18 +119,11 @@ public class AdminTeamService {
 
     /** 팀 내 그룹 목록 조회 */
     public List<RunningGroupResponse> getGroupsByTeam(Integer teamId) {
-        log.info("[GROUP-SVC] 조 목록 조회 - teamId={}", teamId);
         teamRepository.findByTeamId(teamId)
-                .orElseThrow(() -> {
-                    log.warn("[GROUP-SVC] 팀 없음 - teamId={}", teamId);
-                    return new IllegalArgumentException("존재하지 않는 팀입니다. (id=" + teamId + ")");
-                });
-
-        List<RunningGroupResponse> result = runningGroupRepository.findAllByTeamId(teamId).stream()
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 팀입니다. (id=" + teamId + ")"));
+        return runningGroupRepository.findAllByTeamId(teamId).stream()
                 .map(RunningGroupResponse::from)
                 .toList();
-        log.info("[GROUP-SVC] 조 목록 조회 완료 - teamId={}, 건수={}", teamId, result.size());
-        return result;
     }
 
     /** 그룹 생성 */

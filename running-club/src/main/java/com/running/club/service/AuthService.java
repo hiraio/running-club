@@ -1,8 +1,10 @@
 package com.running.club.service;
 
 import com.running.club.domain.CustomUserDetails;
+import com.running.club.domain.FirstLoginCandidate;
 import com.running.club.domain.Member;
 import com.running.club.domain.MeResponse;
+import com.running.club.repository.FirstLoginCandidateRepository;
 import com.running.club.repository.MemberRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,42 +28,35 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final MemberRepository memberRepository;
+    private final FirstLoginCandidateRepository candidateRepository;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
 
     /**
      * 최초 로그인 (이름 + 전화번호).
-     * DB에 미리 등록된 사용자 확인 후 세션 수립.
-     * needsSetup=true이면 프론트에서 /setup-account로 리다이렉트.
+     * DB 쓰기 없음 — candidate 검증 후 세션에 name/phone 저장.
+     * 실제 member 생성 + candidate 소진은 setupAccount()에서 원자적으로 처리.
      */
-    @Transactional
-    public MeResponse firstLogin(String name, String phone,
-                                 HttpServletRequest request, HttpServletResponse response) {
+    public MeResponse firstLogin(String name, String phone, HttpServletRequest request) {
         log.info("[AUTH] 최초 로그인 시도 - name={}", name);
 
-        Member member = memberRepository.findByNameAndPhone(name, phone)
+        candidateRepository.findUnusedByNameAndPhone(name, phone)
                 .orElseThrow(() -> {
-                    log.warn("[AUTH] 최초 로그인 실패 - 이름/전화번호 불일치 name={}", name);
+                    log.warn("[AUTH] 최초 로그인 실패 - 초대 정보 없음 name={}", name);
                     return new IllegalArgumentException("이름 또는 전화번호가 올바르지 않습니다.");
                 });
 
-        // isInitialLogin 검증: loginId가 이미 존재하면 일반 로그인으로 유도
-        if (member.getLoginId() != null) {
-            log.warn("[AUTH] 최초 로그인 차단 - 이미 계정 설정된 회원 name={}, loginId={}", name, member.getLoginId());
-            throw new IllegalStateException("ALREADY_REGISTERED");
-        }
+        // 세션에 저장 (setupAccount에서 읽어서 원자적 처리)
+        HttpSession session = request.getSession(true);
+        session.setAttribute("firstLogin.name", name);
+        session.setAttribute("firstLogin.phone", phone);
 
-        // 세션에 SecurityContext 저장
-        CustomUserDetails userDetails = new CustomUserDetails(member);
-        Authentication auth = UsernamePasswordAuthenticationToken.authenticated(
-                userDetails, null, userDetails.getAuthorities());
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(auth);
-        SecurityContextHolder.setContext(context);
-        new HttpSessionSecurityContextRepository().saveContext(context, request, response);
-
-        log.info("[AUTH] 최초 로그인 성공 - memberId={}, needsSetup={}", member.getId(), member.needsSetup());
-        return buildMeResponse(member);
+        log.info("[AUTH] 최초 로그인 검증 성공 - name={}", name);
+        return MeResponse.builder()
+                .name(name)
+                .role("USER")
+                .needsSetup(true)
+                .build();
     }
 
     /**
@@ -91,23 +86,53 @@ public class AuthService {
 
     /**
      * 계정 설정 (최초 로그인 후 loginId + password 등록).
-     * 인증된 사용자만 호출 가능.
+     * 세션에서 이름/전화번호를 읽어 candidate 소진 + member 생성을 하나의 트랜잭션으로 처리.
      */
     @Transactional
-    public MeResponse setupAccount(String loginId, String password, Integer memberId) {
-        log.info("[AUTH] 계정 설정 시도 - memberId={}, loginId={}", memberId, loginId);
+    public MeResponse setupAccount(String loginId, String password,
+                                   HttpServletRequest request, HttpServletResponse response) {
+        log.info("[AUTH] 계정 설정 시도 - loginId={}", loginId);
+
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            throw new IllegalStateException("세션이 만료되었습니다. 처음 로그인을 다시 시도해주세요.");
+        }
+
+        String name  = (String) session.getAttribute("firstLogin.name");
+        String phone = (String) session.getAttribute("firstLogin.phone");
+
+        if (name == null || phone == null) {
+            throw new IllegalStateException("세션이 만료되었습니다. 처음 로그인을 다시 시도해주세요.");
+        }
 
         if (memberRepository.existsByLoginId(loginId)) {
             log.warn("[AUTH] 계정 설정 실패 - loginId 중복 = {}", loginId);
             throw new IllegalStateException("이미 사용 중인 아이디입니다.");
         }
 
-        Member member = memberRepository.findByIdWithGroup(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        // candidate 소진 + member 생성 + 계정 설정 — 원자적 처리
+        FirstLoginCandidate candidate = candidateRepository.findUnusedByNameAndPhone(name, phone)
+                .orElseThrow(() -> new IllegalStateException("초대 정보가 유효하지 않습니다. 처음 로그인을 다시 시도해주세요."));
 
+        candidate.markUsed();
+
+        Member member = Member.createFromCandidate(name, phone);
         member.setupAccount(loginId, passwordEncoder.encode(password));
+        member = memberRepository.save(member);
 
-        log.info("[AUTH] 계정 설정 완료 - memberId={}, loginId={}", memberId, loginId);
+        // 세션 정리 후 Spring Security 인증 세션 수립
+        session.removeAttribute("firstLogin.name");
+        session.removeAttribute("firstLogin.phone");
+
+        CustomUserDetails userDetails = new CustomUserDetails(member);
+        Authentication auth = UsernamePasswordAuthenticationToken.authenticated(
+                userDetails, null, userDetails.getAuthorities());
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(auth);
+        SecurityContextHolder.setContext(context);
+        new HttpSessionSecurityContextRepository().saveContext(context, request, response);
+
+        log.info("[AUTH] 계정 설정 완료 - memberId={}, loginId={}", member.getId(), loginId);
         return buildMeResponse(member);
     }
 

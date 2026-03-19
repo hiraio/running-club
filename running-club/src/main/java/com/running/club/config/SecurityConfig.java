@@ -30,8 +30,8 @@ public class SecurityConfig {
 	                    // 1. 누구나 접근 가능한 경로
 	                    .requestMatchers("/h2-console/**", "/join", "/login", "/css/**", "/js/**", "/photos/**").permitAll()
 
-	                    // 2. JSON 인증 API (최초 로그인 / 일반 로그인)
-	                    .requestMatchers("/api/auth/first-login", "/api/auth/login").permitAll()
+	                    // 2. JSON 인증 API (최초 로그인 / 일반 로그인 / 계정 설정)
+	                    .requestMatchers("/api/auth/first-login", "/api/auth/login", "/api/auth/setup-account").permitAll()
 
 	                    // 3. 조회성 API는 인증 없이 허용
 	                    .requestMatchers("/api/records/team/**", "/api/records/group/**",

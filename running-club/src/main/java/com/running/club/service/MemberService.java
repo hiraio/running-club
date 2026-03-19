@@ -44,7 +44,6 @@ public class MemberService {
      */
     /** 현재 로그인한 사용자 정보 반환 */
     public MeResponse getMe(Integer memberId) {
-        log.info("[ME] 사용자 정보 조회 - memberId={}", memberId);
         Member member = memberRepository.findByIdWithGroup(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. (id=" + memberId + ")"));
         return MeResponse.builder()
@@ -67,7 +66,6 @@ public class MemberService {
      * 랭킹은 getMemberRanking() 결과에서 현재 멤버를 찾아 순위를 추출.
      */
     public MemberDashboardResponse getDashboard(Integer memberId) {
-        log.info("[DASHBOARD] 대시보드 데이터 조회 - memberId={}", memberId);
 
         Member member = memberRepository.findByIdWithGroup(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
@@ -110,9 +108,6 @@ public class MemberService {
             }
         }
 
-        log.info("[DASHBOARD] 조회 완료 - memberId={}, km={}, rank={}/{}, teamRank={}",
-                memberId, currentDistance, myRank, allRanks.size(), teamRank);
-
         return MemberDashboardResponse.builder()
                 .memberId(memberId)
                 .name(member.getName())
@@ -140,7 +135,6 @@ public class MemberService {
      * rank는 전체 getMemberRanking() 결과에서 찾아서 주입 — 별도 집계 쿼리 없음.
      */
     public MemberPublicProfileResponse getPublicProfile(Integer targetId) {
-        log.info("[PUBLIC_PROFILE] 공개 프로필 조회 - targetId={}", targetId);
         Member member = memberRepository.findByIdWithGroup(targetId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. (id=" + targetId + ")"));
 
@@ -159,8 +153,6 @@ public class MemberService {
         // 최근 5건 (날짜 내림차순)
         List<RunningRecord> recent = runningRecordRepository.findRecentApproved(targetId, PageRequest.of(0, 5));
         List<RunningRecordDTO> recentDTOs = recent.stream().map(RunningRecordDTO::from).toList();
-
-        log.info("[PUBLIC_PROFILE] 조회 완료 - targetId={}, km={}, rank={}", targetId, totalDistance, rank);
 
         return MemberPublicProfileResponse.builder()
                 .memberId(targetId)
@@ -184,7 +176,6 @@ public class MemberService {
      * 전체 랭킹 한 번만 조회 후 Map으로 변환해 N+1 방지.
      */
     public List<GroupMemberDTO> getGroupMembers(Integer groupId) {
-        log.info("[GROUP_MEMBERS] 조 멤버 목록 조회 - groupId={}", groupId);
         runningGroupRepository.findByGroupId(groupId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 조입니다. (id=" + groupId + ")"));
 
@@ -210,66 +201,44 @@ public class MemberService {
                 .sorted(Comparator.comparingDouble(GroupMemberDTO::getTotalDistance).reversed())
                 .collect(Collectors.toList());
 
-        log.info("[GROUP_MEMBERS] 조회 완료 - groupId={}, count={}", groupId, result.size());
         return result;
     }
 
     @Transactional
     public JoinResponse join(JoinRequest request) {
-
-        log.info("[JOIN] 서비스 진입 - loginId={}, groupId={}", request.getLoginId(), request.getGroupId());
-
-        // ── 1. loginId 중복 검증 ──────────────────────────────────────────────
-        log.info("[JOIN] 1단계: loginId 중복 검사 - loginId={}", request.getLoginId());
+        // 1. loginId 중복 검증
         memberRepository.findByLoginId(request.getLoginId())
-                .ifPresent(m -> {
-                    log.warn("[JOIN] 중복 loginId 감지 - loginId={}", request.getLoginId());
-                    throw new IllegalStateException("이미 존재하는 아이디입니다.");
-                });
-        log.info("[JOIN] 1단계 통과: loginId 사용 가능");
+                .ifPresent(m -> { throw new IllegalStateException("이미 존재하는 아이디입니다."); });
 
-        // ── 2. 조 조회 → 팀/대회 자동 도출 ──────────────────────────────────
+        // 2. 조 조회 → 팀/대회 자동 도출
         if (request.getGroupId() == null) {
             throw new IllegalArgumentException("조를 선택해야 합니다.");
         }
-        log.info("[JOIN] 2단계: 조 조회 - groupId={}", request.getGroupId());
         RunningGroup group = runningGroupRepository.findByGroupId(request.getGroupId())
-                .orElseThrow(() -> {
-                    log.warn("[JOIN] 조 없음 - groupId={}", request.getGroupId());
-                    return new IllegalArgumentException("존재하지 않는 조입니다. (id=" + request.getGroupId() + ")");
-                });
-        log.info("[JOIN] 조 조회 성공 - groupName={}", group.getGroupName());
-
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 조입니다. (id=" + request.getGroupId() + ")"));
         Team team = group.getTeam();
-        log.info("[JOIN] 팀 자동 도출 - teamId={}, teamName={}", team.getId(), team.getTeamName());
 
-        // ── 3. 대회 상태 검증 ─────────────────────────────────────────────────
+        // 3. 대회 상태 검증
         Competition competition = team.getCompetition();
         CompetitionStatus status = CompetitionStatus.of(
                 competition.getStartDate(), competition.getEndDate(), competition.getIsActive());
-        log.info("[JOIN] 대회 상태 확인 - competitionId={}, status={}", competition.getId(), status);
         if (status == CompetitionStatus.FINISHED) {
-            log.warn("[JOIN] 종료된 대회 가입 시도 - competitionId={}", competition.getId());
+            log.warn("[JOIN] 종료된 대회 가입 시도 - competitionId={}, loginId={}", competition.getId(), request.getLoginId());
             throw new IllegalStateException("종료된 대회의 조에는 가입할 수 없습니다.");
         }
-        log.info("[JOIN] 3단계 통과: 활성 대회 확인");
 
-        // ── 4. 비밀번호 암호화 + 회원 저장 ───────────────────────────────────
-        log.info("[JOIN] 4단계: 회원 저장 시작");
-        String encodedPassword = passwordEncoder.encode(request.getPassword());
+        // 4. 비밀번호 암호화 + 회원 저장
         Member member = Member.builder()
                 .loginId(request.getLoginId())
-                .password(encodedPassword)
+                .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .role("USER")
                 .team(team)
                 .runningGroup(group)
                 .build();
-
         memberRepository.save(member);
-        log.info("[JOIN] 4단계 완료: 회원 저장 성공 - memberId={}", member.getId());
+        log.info("[JOIN] 회원가입 - memberId={}, loginId={}, groupId={}", member.getId(), member.getLoginId(), group.getId());
 
-        // ── 5. 응답 DTO 반환 ─────────────────────────────────────────────────
         return JoinResponse.builder()
                 .memberId(member.getId())
                 .loginId(member.getLoginId())

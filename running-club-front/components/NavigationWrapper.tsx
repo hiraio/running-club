@@ -1,7 +1,6 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Navbar } from "./Navbar";
 import { UserSidebar } from "./UserSidebar";
 import { AdminSidebar } from "./AdminSidebar";
 import { MobileTopBar } from "./MobileTopBar";
@@ -40,8 +39,8 @@ function Navigation() {
     return user.role === "ADMIN" ? <AdminSidebar /> : <><MobileTopBar /><UserSidebar /></>;
   }
 
-  // 비로그인이거나 공개 경로(login, join 등)는 Navbar
-  return <Navbar />;
+  // 비로그인 또는 login/join 페이지는 네비게이션 없음
+  return null;
 }
 
 function ContentWrapper({ children }: { children: React.ReactNode }) {

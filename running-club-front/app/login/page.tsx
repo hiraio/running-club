@@ -38,6 +38,13 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
 
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+  };
+
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [endiVisible, setEndiVisible] = useState(true);
@@ -97,6 +104,10 @@ export default function LoginPage() {
     setMode(next);
     setError(null);
     setLoginId(""); setPassword(""); setName(""); setPhone("");
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhone(formatPhone(e.target.value));
   };
 
   return (
@@ -271,7 +282,7 @@ export default function LoginPage() {
                     type="tel"
                     placeholder="010-1234-5678"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={handlePhoneChange}
                     required
                     disabled={isLoading}
                     className="bg-secondary border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"

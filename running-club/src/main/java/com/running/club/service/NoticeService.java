@@ -28,10 +28,7 @@ public class NoticeService {
     // ════════════════════════════════════════════════════════════════
 
     public List<NoticeSummaryDTO> getAll() {
-        log.info("[NOTICE-SVC] 공지사항 목록 조회");
-        List<NoticeSummaryDTO> result = noticeRepository.findAllSummary();
-        log.info("[NOTICE-SVC] 공지사항 목록 조회 완료 - 건수={}", result.size());
-        return result;
+        return noticeRepository.findAllSummary();
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -39,12 +36,8 @@ public class NoticeService {
     // ════════════════════════════════════════════════════════════════
 
     public NoticeResponse getOne(Integer id) {
-        log.info("[NOTICE-SVC] 공지사항 단건 조회 - id={}", id);
         Notice notice = noticeRepository.findByNoticeId(id)
-                .orElseThrow(() -> {
-                    log.warn("[NOTICE-SVC] 공지사항 없음 - id={}", id);
-                    return new IllegalArgumentException("존재하지 않는 공지사항입니다. (id=" + id + ")");
-                });
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 공지사항입니다. (id=" + id + ")"));
         return NoticeResponse.from(notice);
     }
 

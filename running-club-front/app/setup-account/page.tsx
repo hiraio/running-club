@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Loader2, ShieldCheck, User, ChevronRight, Check } from "lucide-react";
+import { Loader2, ShieldCheck, User, ChevronRight, Check, X } from "lucide-react";
 
 /**
  * 최초 로그인(VIP) 온보딩 2단계:
@@ -174,6 +174,13 @@ export default function SetupAccountPage() {
                   autoComplete="new-password"
                   className="bg-secondary border-border/50 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
                 />
+                {confirmPassword && (
+                  <p className={`flex items-center gap-1 text-xs ${password === confirmPassword ? "text-green-500" : "text-destructive"}`}>
+                    {password === confirmPassword
+                      ? <><Check className="h-3.5 w-3.5" />비밀번호가 일치합니다.</>
+                      : <><X className="h-3.5 w-3.5" />비밀번호가 일치하지 않습니다.</>}
+                  </p>
+                )}
               </div>
               {error && (
                 <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
@@ -182,7 +189,7 @@ export default function SetupAccountPage() {
               )}
               <Button
                 type="submit"
-                disabled={isLoading || !loginId || !password || !confirmPassword}
+                disabled={isLoading || !loginId || !password || !confirmPassword || password !== confirmPassword}
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
               >
                 {isLoading

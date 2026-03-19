@@ -24,45 +24,32 @@ public class RankingService {
     private final RankSnapshotService     rankSnapshotService;
 
     public List<RankingDTO> getMemberRanking(Integer competitionId) {
-        log.info("[RANKING-SVC] 개인 랭킹 조회 - competitionId={}", competitionId);
-        List<RankingDTO> result;
         if (competitionId != null) {
             validateCompetitionExists(competitionId);
-            result = assignRanks(runningRecordRepository.getMemberRankingByCompetition(competitionId));
+            List<RankingDTO> result = assignRanks(runningRecordRepository.getMemberRankingByCompetition(competitionId));
             mergeRankChange(result, "MEMBER", competitionId);
-        } else {
-            result = assignRanks(runningRecordRepository.getMemberRanking());
-            // competitionId 미지정 시 rankChange 없음 (어느 대회 기준인지 불명확)
+            return result;
         }
-        log.info("[RANKING-SVC] 개인 랭킹 조회 완료 - 건수={}", result.size());
-        return result;
+        // competitionId 미지정 시 rankChange 없음 (어느 대회 기준인지 불명확)
+        return assignRanks(runningRecordRepository.getMemberRanking());
     }
 
     public List<RankingDTO> getGroupRanking(Integer competitionId) {
-        log.info("[RANKING-SVC] 조 랭킹 조회 - competitionId={}", competitionId);
-        List<RankingDTO> result;
         if (competitionId != null) {
             validateCompetitionExists(competitionId);
-            result = assignRanks(runningRecordRepository.getGroupRankingByCompetition(competitionId));
+            List<RankingDTO> result = assignRanks(runningRecordRepository.getGroupRankingByCompetition(competitionId));
             mergeRankChange(result, "GROUP", competitionId);
-        } else {
-            result = assignRanks(runningRecordRepository.getGroupRanking());
+            return result;
         }
-        log.info("[RANKING-SVC] 조 랭킹 조회 완료 - 건수={}", result.size());
-        return result;
+        return assignRanks(runningRecordRepository.getGroupRanking());
     }
 
     public List<RankingDTO> getTeamRanking(Integer competitionId) {
-        log.info("[RANKING-SVC] 팀 랭킹 조회 - competitionId={}", competitionId);
-        List<RankingDTO> result;
         if (competitionId != null) {
             validateCompetitionExists(competitionId);
-            result = assignRanks(runningRecordRepository.getTeamRankingByCompetition(competitionId));
-        } else {
-            result = assignRanks(runningRecordRepository.getTeamRanking());
+            return assignRanks(runningRecordRepository.getTeamRankingByCompetition(competitionId));
         }
-        log.info("[RANKING-SVC] 팀 랭킹 조회 완료 - 건수={}", result.size());
-        return result;
+        return assignRanks(runningRecordRepository.getTeamRanking());
     }
 
     // ── private ──────────────────────────────────────────────────────────────

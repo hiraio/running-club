@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getApprovalHistory } from "@/lib/api";
+import { getApprovalHistory, resolvePhotoUrl } from "@/lib/api";
 import type { AdminHistoryDTO } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -101,7 +101,7 @@ function DetailModal({
         <div className="rounded-xl overflow-hidden bg-secondary aspect-video flex items-center justify-center">
           {record.photoUrl ? (
             <img
-              src={record.photoUrl}
+              src={resolvePhotoUrl(record.photoUrl)!}
               alt="러닝 인증샷"
               className="w-full h-full object-contain"
             />

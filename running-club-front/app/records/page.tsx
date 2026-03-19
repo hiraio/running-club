@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { getMyRecords, uploadRecord } from "@/lib/api";
+import { getMyRecords, uploadRecord, resolvePhotoUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import EndiSpeechBanner from "@/components/EndiSpeechBanner";
 import type { RunningRecord } from "@/lib/types";
@@ -287,7 +287,7 @@ function RecordCard({ record }: { record: RunningRecord }) {
 
           <div className="h-28 w-28 shrink-0 bg-[#0c0d10] rounded-xl overflow-hidden border border-[#2a2d37]">
             {record.photoUrl ? (
-              <img src={record.photoUrl} alt="Run" className="h-full w-full object-cover" />
+              <img src={resolvePhotoUrl(record.photoUrl)!} alt="Run" className="h-full w-full object-cover" />
             ) : (
               <div className="h-full w-full flex items-center justify-center opacity-10">
                 <MapPin className="h-8 w-8 text-white" />

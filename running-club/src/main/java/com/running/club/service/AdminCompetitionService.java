@@ -26,10 +26,7 @@ public class AdminCompetitionService {
     // 전체 목록 조회 (팀 수 포함)
     @Transactional(readOnly = true)
     public List<CompetitionSummaryDTO> getAll() {
-        log.info("[COMPETITION-SVC] 대회 전체 목록 조회");
-        List<CompetitionSummaryDTO> result = competitionRepository.findAllWithTeamCount();
-        log.info("[COMPETITION-SVC] 대회 전체 목록 조회 완료 - 건수={}", result.size());
-        return result;
+        return competitionRepository.findAllWithTeamCount();
     }
 
     // 대회 생성
