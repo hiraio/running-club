@@ -501,7 +501,7 @@ export default function DashboardPage() {
 
                     <div className="text-right shrink-0">
                       <div className="text-xs font-bold text-foreground">
-                        {(record.duration / 60 / record.distance).toFixed(1)}
+                        {record.distance > 0 ? (record.duration / 60 / record.distance).toFixed(1) : "-"}
                       </div>
                       <div className="text-[10px] text-muted-foreground">페이스(분/km)</div>
                     </div>
