@@ -82,8 +82,19 @@ export default function DashboardPage() {
     ? Math.min((data.currentDistance / data.targetDistance) * 100, 100)
     : 0;
 
-  const formatDuration = (s: number) =>
-    `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const formatDuration = (s: number) => {
+    const min = Math.floor(s / 60);
+    const sec = s % 60;
+    return sec === 0 ? `${min}분` : `${min}분 ${sec}초`;
+  };
+
+  const formatPace = (durationSec: number, distanceKm: number) => {
+    if (distanceKm <= 0) return "-";
+    const paceSeconds = durationSec / distanceKm;
+    const min = Math.floor(paceSeconds / 60);
+    const sec = Math.round(paceSeconds % 60);
+    return `${min}'${String(sec).padStart(2, "0")}"`;
+  };
 
   return (
     <>
@@ -501,9 +512,9 @@ export default function DashboardPage() {
 
                     <div className="text-right shrink-0">
                       <div className="text-xs font-bold text-foreground">
-                        {record.distance > 0 ? (record.duration / 60 / record.distance).toFixed(1) : "-"}
+                        {formatPace(record.duration, record.distance)}
                       </div>
-                      <div className="text-[10px] text-muted-foreground">페이스(분/km)</div>
+                      <div className="text-[10px] text-muted-foreground">/km</div>
                     </div>
                   </motion.div>
                 ))

@@ -105,7 +105,7 @@ export default function GoalProgressRing({
             {percent}%
           </motion.div>
           <div className="text-xs text-white/40 mt-0.5">
-            목표 {target}km 중 {current.toFixed(1)}km
+            이번 학기 목표 {target}km 중 {current.toFixed(1)}km
           </div>
         </div>
       ) : (
