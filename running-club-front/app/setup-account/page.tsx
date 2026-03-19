@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { setupAccount, updateMemberProfile } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -25,7 +25,12 @@ import { Loader2, ShieldCheck, User, ChevronRight, Check, X } from "lucide-react
  */
 export default function SetupAccountPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading, setUser } = useAuth();
+
+  // 모바일 크로스도메인 쿠키 차단 대비: URL에서 name/phone 추출
+  const candidateName = searchParams.get("name");
+  const candidatePhone = searchParams.get("phone");
 
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -61,7 +66,7 @@ export default function SetupAccountPage() {
 
     setIsLoading(true);
     try {
-      const updatedUser = await setupAccount(loginId, password);
+      const updatedUser = await setupAccount(loginId, password, candidateName, candidatePhone);
       setUser(updatedUser);
       setStep(2); // 프로필 입력 단계로
     } catch (err) {

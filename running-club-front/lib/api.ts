@@ -143,9 +143,14 @@ export const firstLogin = async (
  */
 export const setupAccount = async (
   loginId: string,
-  password: string
+  password: string,
+  name?: string | null,
+  phone?: string | null,
 ): Promise<AuthUser> => {
-  const res = await jsonRequest("POST", `${BASE}/api/auth/setup-account`, { loginId, password });
+  const body: Record<string, string> = { loginId, password };
+  if (name) body.name = name;
+  if (phone) body.phone = phone;
+  const res = await jsonRequest("POST", `${BASE}/api/auth/setup-account`, body);
   if (!res.ok) await handleError(res);
   return res.json();
 };

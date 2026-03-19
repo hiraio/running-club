@@ -61,7 +61,9 @@ public class AuthController {
             HttpServletResponse httpResponse) {
         log.info("[AUTH-CTL] 계정 설정 요청 - loginId={}", request.getLoginId());
         MeResponse me = authService.setupAccount(
-                request.getLoginId(), request.getPassword(), httpRequest, httpResponse);
+                request.getLoginId(), request.getPassword(),
+                request.getName(), request.getPhone(),
+                httpRequest, httpResponse);
         return ResponseEntity.ok(me);
     }
 }

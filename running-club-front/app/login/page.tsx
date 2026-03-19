@@ -83,7 +83,9 @@ export default function LoginPage() {
       const user = await firstLogin(name, phone);
       setUser(user);
       if (user.needsSetup) {
-        router.push("/setup-account");
+        // 세션 쿠키가 모바일에서 차단될 수 있으므로 name/phone을 URL로 전달
+        const params = new URLSearchParams({ name, phone });
+        router.push(`/setup-account?${params.toString()}`);
       } else {
         setShowWelcome(true);
         router.push("/dashboard");

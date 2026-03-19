@@ -90,16 +90,25 @@ public class AuthService {
      */
     @Transactional
     public MeResponse setupAccount(String loginId, String password,
+                                   String reqName, String reqPhone,
                                    HttpServletRequest request, HttpServletResponse response) {
         log.info("[AUTH] 계정 설정 시도 - loginId={}", loginId);
 
+        // 1순위: 세션에서 name/phone 읽기
+        // 2순위: 모바일 크로스도메인 쿠키 차단 시 프론트가 직접 전달한 name/phone
+        String name = null;
+        String phone = null;
+
         HttpSession session = request.getSession(false);
-        if (session == null) {
-            throw new IllegalStateException("세션이 만료되었습니다. 처음 로그인을 다시 시도해주세요.");
+        if (session != null) {
+            name  = (String) session.getAttribute("firstLogin.name");
+            phone = (String) session.getAttribute("firstLogin.phone");
         }
 
-        String name  = (String) session.getAttribute("firstLogin.name");
-        String phone = (String) session.getAttribute("firstLogin.phone");
+        if (name == null || phone == null) {
+            name = reqName;
+            phone = reqPhone;
+        }
 
         if (name == null || phone == null) {
             throw new IllegalStateException("세션이 만료되었습니다. 처음 로그인을 다시 시도해주세요.");
