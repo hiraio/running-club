@@ -40,11 +40,11 @@ public class AdminTeamService {
     // 팀(Team) 관련
     // ════════════════════════════════════════════════════════════════
 
-    /** 대회 내 팀 목록 조회 (그룹 수 포함) */
+    /** 대회 내 팀 목록 조회 (그룹 수 포함, 대회 기간 내 기록만 집계) */
     public List<TeamSummaryDTO> getTeamsByCompetition(Integer competitionId) {
-        competitionRepository.findByCompetitionId(competitionId)
+        Competition comp = competitionRepository.findByCompetitionId(competitionId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 대회입니다. (id=" + competitionId + ")"));
-        return teamRepository.findAllByCompetitionIdWithGroupCount(competitionId);
+        return teamRepository.findAllByCompetitionIdWithGroupCount(competitionId, comp.getStartDate(), comp.getEndDate());
     }
 
     /** 팀 생성 */

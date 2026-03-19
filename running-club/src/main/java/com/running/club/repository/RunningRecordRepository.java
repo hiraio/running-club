@@ -107,29 +107,38 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
 
     // ── 대회별 랭킹 쿼리 (APPROVED + 특정 competition_id 필터) ───────────────
 
-    /** 팀별 랭킹 — 특정 대회 기준 */
+    /** 팀별 랭킹 — 특정 대회 기준 (대회 기간 내 기록만 집계) */
     @Query("SELECT new com.running.club.domain.RankingDTO(m.team.id, m.team.teamName, SUM(r.distance), COUNT(r)) " +
            "FROM RunningRecord r JOIN r.member m " +
            "WHERE r.status = 'APPROVED' AND m.team IS NOT NULL AND r.competition.id = :competitionId " +
+           "AND r.runningDate >= :startDate AND r.runningDate <= :endDate " +
            "GROUP BY m.team.id, m.team.teamName " +
            "ORDER BY SUM(r.distance) DESC")
-    List<RankingDTO> getTeamRankingByCompetition(@Param("competitionId") Integer competitionId);
+    List<RankingDTO> getTeamRankingByCompetition(@Param("competitionId") Integer competitionId,
+                                                  @Param("startDate") LocalDate startDate,
+                                                  @Param("endDate") LocalDate endDate);
 
-    /** 조별 랭킹 — 특정 대회 기준 */
+    /** 조별 랭킹 — 특정 대회 기준 (대회 기간 내 기록만 집계) */
     @Query("SELECT new com.running.club.domain.RankingDTO(m.runningGroup.id, m.runningGroup.groupName, SUM(r.distance), COUNT(r)) " +
            "FROM RunningRecord r JOIN r.member m " +
            "WHERE r.status = 'APPROVED' AND m.runningGroup IS NOT NULL AND r.competition.id = :competitionId " +
+           "AND r.runningDate >= :startDate AND r.runningDate <= :endDate " +
            "GROUP BY m.runningGroup.id, m.runningGroup.groupName " +
            "ORDER BY SUM(r.distance) DESC")
-    List<RankingDTO> getGroupRankingByCompetition(@Param("competitionId") Integer competitionId);
+    List<RankingDTO> getGroupRankingByCompetition(@Param("competitionId") Integer competitionId,
+                                                   @Param("startDate") LocalDate startDate,
+                                                   @Param("endDate") LocalDate endDate);
 
-    /** 개인별 랭킹 — 특정 대회 기준 */
+    /** 개인별 랭킹 — 특정 대회 기준 (대회 기간 내 기록만 집계) */
     @Query("SELECT new com.running.club.domain.RankingDTO(m.id, m.name, SUM(r.distance), COUNT(r)) " +
            "FROM RunningRecord r JOIN r.member m " +
            "WHERE r.status = 'APPROVED' AND r.competition.id = :competitionId " +
+           "AND r.runningDate >= :startDate AND r.runningDate <= :endDate " +
            "GROUP BY m.id, m.name " +
            "ORDER BY SUM(r.distance) DESC")
-    List<RankingDTO> getMemberRankingByCompetition(@Param("competitionId") Integer competitionId);
+    List<RankingDTO> getMemberRankingByCompetition(@Param("competitionId") Integer competitionId,
+                                                    @Param("startDate") LocalDate startDate,
+                                                    @Param("endDate") LocalDate endDate);
 
     // ── 개인 대시보드용 쿼리 ──────────────────────────────────────────────────
 
@@ -167,9 +176,12 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
            "JOIN m.runningGroup rg " +
            "JOIN m.team t " +
            "WHERE r.competition.id = :competitionId AND r.status = 'APPROVED' " +
+           "AND r.runningDate >= :startDate AND r.runningDate <= :endDate " +
            "GROUP BY rg.id, rg.groupName, t.id, t.teamName, t.colorCode " +
            "ORDER BY SUM(r.distance) DESC")
-    List<GroupContributionDTO> getGroupContributionsByCompetition(@Param("competitionId") Integer competitionId);
+    List<GroupContributionDTO> getGroupContributionsByCompetition(@Param("competitionId") Integer competitionId,
+                                                                  @Param("startDate") LocalDate startDate,
+                                                                  @Param("endDate") LocalDate endDate);
 
     /**
      * 오늘의 MVP 후보 — 당일 APPROVED 기록 누적 거리 내림차순.

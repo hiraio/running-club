@@ -95,7 +95,7 @@ public class MemberService {
             Competition comp = member.getTeam().getCompetition(); // 트랜잭션 내 lazy 로드
             if (comp != null) {
                 competitionId = comp.getId();
-                List<RankingDTO> teamRankings = runningRecordRepository.getTeamRankingByCompetition(comp.getId());
+                List<RankingDTO> teamRankings = runningRecordRepository.getTeamRankingByCompetition(comp.getId(), comp.getStartDate(), comp.getEndDate());
                 for (int i = 0; i < teamRankings.size(); i++) teamRankings.get(i).setRank(i + 1);
                 Integer myTeamId = member.getTeam().getId();
                 for (RankingDTO r : teamRankings) {

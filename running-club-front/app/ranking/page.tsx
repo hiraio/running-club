@@ -396,8 +396,8 @@ function GroupContributionCard({ group, isWinningTeam, maxKm, index, onGroupClic
 // ── 조별 기여도 섹션 ──────────────────────────────────────────
 function GroupContributionSection({ battle, loading, onGroupClick }: { battle: CompetitionBattle | null; loading: boolean; onGroupClick: (groupId: number, groupName: string, colorCode: string | null) => void }) {
   if (loading) return <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-36 w-full rounded-2xl" />)}</div>;
-  if (!battle || battle.groupRankings.length === 0)
-    return <div className="flex flex-col items-center justify-center py-12 text-muted-foreground"><Trophy className="mb-2 h-12 w-12 opacity-50" /><p>기여도 데이터가 없습니다.</p></div>;
+  if (!battle || battle.status === "READY" || battle.groupRankings.length === 0)
+    return <div className="flex flex-col items-center justify-center py-12 text-muted-foreground"><Trophy className="mb-2 h-12 w-12 opacity-50" /><p>{battle?.status === "READY" ? "대회 시작 후 집계됩니다" : "기여도 데이터가 없습니다."}</p></div>;
 
   const sortedTeams = [...battle.teams].sort((a, b) => b.totalKm - a.totalKm);
   const winningTeamId = sortedTeams.length >= 2 && sortedTeams[0].totalKm > sortedTeams[1].totalKm ? sortedTeams[0].id : null;
@@ -496,6 +496,20 @@ export default function RankingPage() {
           {/* ── 2. 팀 배틀 현황 ── */}
           {isBattleLoading ? (
             <Skeleton className="h-52 w-full rounded-2xl" />
+          ) : battle && battle.status === "READY" ? (
+            <Card className="border-primary/30 bg-primary/5 overflow-hidden">
+              <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+                <Calendar className="h-10 w-10 text-primary mb-3 animate-pulse" />
+                <p className="text-lg font-bold text-foreground mb-1">{battle.title}</p>
+                <p className="text-sm text-muted-foreground mb-3">
+                  {battle.startDate} 시작 예정
+                </p>
+                <Badge className="bg-primary/20 text-primary border-primary/30 text-sm px-3 py-1">
+                  {battle.daysUntilStart === 0 ? "오늘 시작!" : `D-${battle.daysUntilStart}`}
+                </Badge>
+                <p className="text-xs text-muted-foreground mt-3">대회가 시작되면 랭킹이 집계됩니다</p>
+              </CardContent>
+            </Card>
           ) : battle ? (
             <TeamBattleBar battle={battle} />
           ) : null}

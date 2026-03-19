@@ -89,8 +89,8 @@ public class RankSnapshotService {
         rankSnapshotRepository.deleteByTypeAndCompetitionAndDate(type, comp.getId(), today);
 
         List<RankingDTO> rankings = "MEMBER".equals(type)
-                ? assignRanks(runningRecordRepository.getMemberRankingByCompetition(comp.getId()))
-                : assignRanks(runningRecordRepository.getGroupRankingByCompetition(comp.getId()));
+                ? assignRanks(runningRecordRepository.getMemberRankingByCompetition(comp.getId(), comp.getStartDate(), comp.getEndDate()))
+                : assignRanks(runningRecordRepository.getGroupRankingByCompetition(comp.getId(), comp.getStartDate(), comp.getEndDate()));
 
         if (rankings.isEmpty()) {
             log.info("[SNAPSHOT] {} 스냅샷 저장 건너뜀 (기록 없음) - competitionId={}", type, comp.getId());

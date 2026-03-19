@@ -6,6 +6,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.running.club.domain.Competition;
 import com.running.club.domain.RankingDTO;
 import com.running.club.repository.CompetitionRepository;
 import com.running.club.repository.RunningRecordRepository;
@@ -25,8 +26,9 @@ public class RankingService {
 
     public List<RankingDTO> getMemberRanking(Integer competitionId) {
         if (competitionId != null) {
-            validateCompetitionExists(competitionId);
-            List<RankingDTO> result = assignRanks(runningRecordRepository.getMemberRankingByCompetition(competitionId));
+            Competition c = findCompetition(competitionId);
+            List<RankingDTO> result = assignRanks(
+                    runningRecordRepository.getMemberRankingByCompetition(competitionId, c.getStartDate(), c.getEndDate()));
             mergeRankChange(result, "MEMBER", competitionId);
             return result;
         }
@@ -36,8 +38,9 @@ public class RankingService {
 
     public List<RankingDTO> getGroupRanking(Integer competitionId) {
         if (competitionId != null) {
-            validateCompetitionExists(competitionId);
-            List<RankingDTO> result = assignRanks(runningRecordRepository.getGroupRankingByCompetition(competitionId));
+            Competition c = findCompetition(competitionId);
+            List<RankingDTO> result = assignRanks(
+                    runningRecordRepository.getGroupRankingByCompetition(competitionId, c.getStartDate(), c.getEndDate()));
             mergeRankChange(result, "GROUP", competitionId);
             return result;
         }
@@ -46,8 +49,9 @@ public class RankingService {
 
     public List<RankingDTO> getTeamRanking(Integer competitionId) {
         if (competitionId != null) {
-            validateCompetitionExists(competitionId);
-            return assignRanks(runningRecordRepository.getTeamRankingByCompetition(competitionId));
+            Competition c = findCompetition(competitionId);
+            return assignRanks(
+                    runningRecordRepository.getTeamRankingByCompetition(competitionId, c.getStartDate(), c.getEndDate()));
         }
         return assignRanks(runningRecordRepository.getTeamRanking());
     }
@@ -75,8 +79,8 @@ public class RankingService {
         });
     }
 
-    private void validateCompetitionExists(Integer competitionId) {
-        competitionRepository.findByCompetitionId(competitionId)
+    private Competition findCompetition(Integer competitionId) {
+        return competitionRepository.findByCompetitionId(competitionId)
                 .orElseThrow(() -> {
                     log.warn("[RANKING-SVC] 대회 없음 - competitionId={}", competitionId);
                     return new IllegalArgumentException("존재하지 않는 대회입니다. (id=" + competitionId + ")");

@@ -1,5 +1,6 @@
 package com.running.club.repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,16 +29,23 @@ public interface TeamRepository extends JpaRepository<Team, Integer> {
      * total_km 컬럼 폐기 → running_records의 APPROVED 기록을 서브쿼리 SUM으로 계산.
      * 서브쿼리로 팀별 누적 거리를 계산 — 항상 실제 데이터와 일치.
      */
+    /**
+     * 대회 내 팀 목록 + 조 수 + 대회 기간 내 누적 거리.
+     * startDate/endDate로 기록 날짜 범위 필터링.
+     */
     @Query("SELECT new com.running.club.domain.TeamSummaryDTO(" +
            "t.id, t.teamName, t.colorCode, " +
            "COALESCE((SELECT SUM(r2.distance) FROM RunningRecord r2 JOIN r2.member m2 " +
-           "          WHERE m2.team = t AND r2.status = 'APPROVED'), 0.0), " +
+           "          WHERE m2.team = t AND r2.status = 'APPROVED' " +
+           "          AND r2.runningDate >= :startDate AND r2.runningDate <= :endDate), 0.0), " +
            "COUNT(DISTINCT g)) " +
            "FROM Team t LEFT JOIN t.groups g " +
            "WHERE t.competition.id = :competitionId " +
            "GROUP BY t.id, t.teamName, t.colorCode " +
            "ORDER BY t.id ASC")
-    List<TeamSummaryDTO> findAllByCompetitionIdWithGroupCount(@Param("competitionId") Integer competitionId);
+    List<TeamSummaryDTO> findAllByCompetitionIdWithGroupCount(@Param("competitionId") Integer competitionId,
+                                                              @Param("startDate") LocalDate startDate,
+                                                              @Param("endDate") LocalDate endDate);
 
     /** 단건 조회 — 메서드 명명 규칙 대신 JPQL 명시 */
     @Query("SELECT t FROM Team t WHERE t.id = :id")

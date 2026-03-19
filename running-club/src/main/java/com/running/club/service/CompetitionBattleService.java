@@ -47,14 +47,16 @@ public class CompetitionBattleService {
                                 == CompetitionStatus.PROCEEDING ? 0 : 1))
                 .orElseThrow(() -> new IllegalStateException("현재 진행 중인 대회가 없습니다."));
 
-        // 2. 팀 배틀 데이터 (서브쿼리로 실시간 totalKm 집계 포함)
+        // 2. 팀 배틀 데이터 (대회 기간 내 기록만 집계)
         List<TeamSummaryDTO> teams = teamRepository
-                .findAllByCompetitionIdWithGroupCount(competition.getId());
+                .findAllByCompetitionIdWithGroupCount(competition.getId(),
+                        competition.getStartDate(), competition.getEndDate());
         teams.sort(Comparator.comparingDouble(TeamSummaryDTO::getTotalKm).reversed());
 
-        // 3. 조별 기여도 (팀 구분 없이 전체 조 통합 랭킹)
+        // 3. 조별 기여도 (대회 기간 내 기록만 집계)
         List<GroupContributionDTO> groups = runningRecordRepository
-                .getGroupContributionsByCompetition(competition.getId());
+                .getGroupContributionsByCompetition(competition.getId(),
+                        competition.getStartDate(), competition.getEndDate());
         for (int i = 0; i < groups.size(); i++) {
             groups.get(i).setRank(i + 1);
             groups.get(i).setTopContributor(i == 0);
