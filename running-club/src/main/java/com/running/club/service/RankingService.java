@@ -26,9 +26,9 @@ public class RankingService {
 
     public List<RankingDTO> getMemberRanking(Integer competitionId) {
         if (competitionId != null) {
-            Competition c = findCompetition(competitionId);
+            findCompetition(competitionId);
             List<RankingDTO> result = assignRanks(
-                    runningRecordRepository.getMemberRankingByCompetition(competitionId, c.getStartDate(), c.getEndDate()));
+                    runningRecordRepository.getMemberRankingByCompetition(competitionId));
             mergeRankChange(result, "MEMBER", competitionId);
             return result;
         }

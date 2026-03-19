@@ -89,7 +89,7 @@ public class RankSnapshotService {
         rankSnapshotRepository.deleteByTypeAndCompetitionAndDate(type, comp.getId(), today);
 
         List<RankingDTO> rankings = "MEMBER".equals(type)
-                ? assignRanks(runningRecordRepository.getMemberRankingByCompetition(comp.getId(), comp.getStartDate(), comp.getEndDate()))
+                ? assignRanks(runningRecordRepository.getMemberRankingByCompetition(comp.getId()))
                 : assignRanks(runningRecordRepository.getGroupRankingByCompetition(comp.getId(), comp.getStartDate(), comp.getEndDate()));
 
         if (rankings.isEmpty()) {

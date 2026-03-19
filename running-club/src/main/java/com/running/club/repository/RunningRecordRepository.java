@@ -129,16 +129,13 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
                                                    @Param("startDate") LocalDate startDate,
                                                    @Param("endDate") LocalDate endDate);
 
-    /** 개인별 랭킹 — 특정 대회 기준 (대회 기간 내 기록만 집계) */
+    /** 개인별 랭킹 — 특정 대회 기준 (날짜 무관, 전 기간 집계) */
     @Query("SELECT new com.running.club.domain.RankingDTO(m.id, m.name, SUM(r.distance), COUNT(r)) " +
            "FROM RunningRecord r JOIN r.member m " +
            "WHERE r.status = 'APPROVED' AND r.competition.id = :competitionId " +
-           "AND r.runningDate >= :startDate AND r.runningDate <= :endDate " +
            "GROUP BY m.id, m.name " +
            "ORDER BY SUM(r.distance) DESC")
-    List<RankingDTO> getMemberRankingByCompetition(@Param("competitionId") Integer competitionId,
-                                                    @Param("startDate") LocalDate startDate,
-                                                    @Param("endDate") LocalDate endDate);
+    List<RankingDTO> getMemberRankingByCompetition(@Param("competitionId") Integer competitionId);
 
     // ── 개인 대시보드용 쿼리 ──────────────────────────────────────────────────
 
