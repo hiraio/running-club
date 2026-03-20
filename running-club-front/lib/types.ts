@@ -429,6 +429,13 @@ export interface NoticeCreateRequest {
   isPinned: boolean;
 }
 
+/** PATCH /api/admin/notices/{id} 요청 바디 (부분 업데이트) */
+export interface NoticeUpdateRequest {
+  title?: string;
+  content?: string;
+  isPinned?: boolean;
+}
+
 // ============================================================
 // 멤버 공개 프로필 (GET /api/members/{id}/profile)
 // ============================================================

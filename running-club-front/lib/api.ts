@@ -30,6 +30,7 @@ import type {
   NoticeSummary,
   NoticeDetail,
   NoticeCreateRequest,
+  NoticeUpdateRequest,
   RecentFeedResponse,
 } from "./types";
 
@@ -736,6 +737,16 @@ export const createNotice = async (
   request: NoticeCreateRequest
 ): Promise<NoticeDetail> => {
   const res = await jsonRequest("POST", `${BASE}/api/admin/notices`, request);
+  if (!res.ok) await handleError(res);
+  return res.json();
+};
+
+/** PATCH /api/admin/notices/{id} — 수정 (관리자) */
+export const updateNotice = async (
+  id: number,
+  request: NoticeUpdateRequest
+): Promise<NoticeDetail> => {
+  const res = await jsonRequest("PATCH", `${BASE}/api/admin/notices/${id}`, request);
   if (!res.ok) await handleError(res);
   return res.json();
 };

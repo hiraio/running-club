@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getNotices, createNotice, deleteNotice } from "@/lib/api";
-import type { NoticeSummary, NoticeCreateRequest } from "@/lib/types";
+import dynamic from "next/dynamic";
+const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
+import remarkGfm from "remark-gfm";
+import { getNotices, getNotice, createNotice, updateNotice, deleteNotice } from "@/lib/api";
+import type { NoticeSummary, NoticeCreateRequest, NoticeUpdateRequest } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bell, Plus, Trash2, Pin } from "lucide-react";
+import { Bell, Plus, Trash2, Pin, Pencil, Eye, FileText } from "lucide-react";
 
 type FormState = { title: string; content: string; isPinned: boolean };
 const emptyForm: FormState = { title: "", content: "", isPinned: false };
@@ -26,11 +29,14 @@ export default function AdminNoticesPage() {
   const [notices, setNotices] = useState<NoticeSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 생성 Dialog
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState<FormState>(emptyForm);
-  const [isCreating, setIsCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
+  // 생성/수정 Dialog (통합)
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null); // null=생성, number=수정
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
 
   // 삭제 Dialog
   const [deleteTarget, setDeleteTarget] = useState<NoticeSummary | null>(null);
@@ -53,27 +59,63 @@ export default function AdminNoticesPage() {
     fetchNotices();
   }, [fetchNotices]);
 
-  const handleCreate = async () => {
-    if (!createForm.title.trim() || !createForm.content.trim()) {
-      setCreateError("제목과 내용을 입력해주세요.");
+  // 생성 다이얼로그 열기
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setFormError(null);
+    setPreviewMode(false);
+    setFormOpen(true);
+  };
+
+  // 수정 다이얼로그 열기 (상세 조회 후 폼 채우기)
+  const openEdit = async (id: number) => {
+    setEditingId(id);
+    setForm(emptyForm);
+    setFormError(null);
+    setPreviewMode(false);
+    setIsLoadingDetail(true);
+    setFormOpen(true);
+    try {
+      const detail = await getNotice(id);
+      setForm({ title: detail.title, content: detail.content, isPinned: detail.isPinned });
+    } catch {
+      setFormError("공지사항을 불러올 수 없습니다.");
+    } finally {
+      setIsLoadingDetail(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!form.title.trim() || !form.content.trim()) {
+      setFormError("제목과 내용을 입력해주세요.");
       return;
     }
-    setIsCreating(true);
-    setCreateError(null);
+    setIsSaving(true);
+    setFormError(null);
     try {
-      const req: NoticeCreateRequest = {
-        title: createForm.title.trim(),
-        content: createForm.content.trim(),
-        isPinned: createForm.isPinned,
-      };
-      await createNotice(req);
-      setCreateOpen(false);
-      setCreateForm(emptyForm);
+      if (editingId) {
+        const req: NoticeUpdateRequest = {
+          title: form.title.trim(),
+          content: form.content.trim(),
+          isPinned: form.isPinned,
+        };
+        await updateNotice(editingId, req);
+      } else {
+        const req: NoticeCreateRequest = {
+          title: form.title.trim(),
+          content: form.content.trim(),
+          isPinned: form.isPinned,
+        };
+        await createNotice(req);
+      }
+      setFormOpen(false);
+      setForm(emptyForm);
       await fetchNotices();
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "생성에 실패했습니다.");
+      setFormError(err instanceof Error ? err.message : "저장에 실패했습니다.");
     } finally {
-      setIsCreating(false);
+      setIsSaving(false);
     }
   };
 
@@ -110,11 +152,7 @@ export default function AdminNoticesPage() {
           </div>
           <Button
             className="bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => {
-              setCreateForm(emptyForm);
-              setCreateError(null);
-              setCreateOpen(true);
-            }}
+            onClick={openCreate}
           >
             <Plus className="h-4 w-4 mr-1.5" />
             공지 작성
@@ -164,18 +202,28 @@ export default function AdminNoticesPage() {
                       </p>
                     </div>
 
-                    {/* 삭제 버튼 */}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                      onClick={() => {
-                        setDeleteError(null);
-                        setDeleteTarget(notice);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {/* 수정/삭제 버튼 */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        onClick={() => openEdit(notice.id)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          setDeleteError(null);
+                          setDeleteTarget(notice);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -184,62 +232,127 @@ export default function AdminNoticesPage() {
         )}
       </div>
 
-      {/* 생성 Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="bg-card border-border sm:max-w-md">
+      {/* 생성/수정 통합 Dialog */}
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="bg-card border-border sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>공지 작성</DialogTitle>
-            <DialogDescription>새 공지사항 내용을 입력하세요.</DialogDescription>
+            <DialogTitle>{editingId ? "공지 수정" : "공지 작성"}</DialogTitle>
+            <DialogDescription>
+              {editingId ? "공지사항 내용을 수정하세요." : "새 공지사항 내용을 입력하세요."}
+              {" "}마크다운 문법을 지원합니다.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>제목</Label>
-              <Input
-                placeholder="공지 제목"
-                value={createForm.title}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, title: e.target.value })
-                }
-                className="bg-background border-border"
-              />
+
+          {isLoadingDetail ? (
+            <div className="space-y-3 py-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-40 w-full" />
             </div>
-            <div className="space-y-1.5">
-              <Label>내용</Label>
-              <textarea
-                placeholder="공지 내용을 입력하세요..."
-                value={createForm.content}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, content: e.target.value })
-                }
-                rows={5}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-              />
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>제목</Label>
+                <Input
+                  placeholder="공지 제목"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  className="bg-background border-border"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label>내용</Label>
+                  <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMode(false)}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                        !previewMode
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <FileText className="h-3 w-3" />
+                      작성
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMode(true)}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                        previewMode
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Eye className="h-3 w-3" />
+                      미리보기
+                    </button>
+                  </div>
+                </div>
+
+                {previewMode ? (
+                  <div className="min-h-[160px] rounded-md border border-border bg-background px-3 py-2">
+                    {form.content.trim() ? (
+                      <div className="prose prose-invert prose-sm max-w-none
+                        prose-headings:text-foreground prose-headings:font-bold
+                        prose-p:text-muted-foreground prose-p:leading-relaxed
+                        prose-strong:text-foreground prose-strong:font-semibold
+                        prose-em:text-blue-300
+                        prose-a:text-blue-400 prose-a:underline
+                        prose-code:text-blue-300 prose-code:bg-blue-500/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+                        prose-blockquote:border-l-blue-500/50 prose-blockquote:text-muted-foreground
+                        prose-ul:text-muted-foreground prose-ol:text-muted-foreground
+                        prose-li:marker:text-blue-400
+                        prose-hr:border-border/50
+                      ">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {form.content}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground py-4 text-center">
+                        내용을 입력하면 미리보기가 표시됩니다.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <textarea
+                    placeholder={"마크다운을 지원합니다.\n\n예시:\n## 제목\n**굵게** *기울임*\n- 목록 항목\n> 인용문"}
+                    value={form.content}
+                    onChange={(e) => setForm({ ...form, content: e.target.value })}
+                    rows={8}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none font-mono"
+                  />
+                )}
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={form.isPinned}
+                  onChange={(e) => setForm({ ...form, isPinned: e.target.checked })}
+                  className="accent-primary h-4 w-4"
+                />
+                <span className="text-sm text-foreground">상단 고정</span>
+              </label>
+
+              {formError && (
+                <p className="text-sm text-destructive">{formError}</p>
+              )}
             </div>
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={createForm.isPinned}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, isPinned: e.target.checked })
-                }
-                className="accent-primary h-4 w-4"
-              />
-              <span className="text-sm text-foreground">상단 고정</span>
-            </label>
-            {createError && (
-              <p className="text-sm text-destructive">{createError}</p>
-            )}
-          </div>
+          )}
+
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+            <Button variant="outline" onClick={() => setFormOpen(false)}>
               취소
             </Button>
             <Button
               className="bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={handleCreate}
-              disabled={isCreating}
+              onClick={handleSave}
+              disabled={isSaving || isLoadingDetail}
             >
-              {isCreating ? "등록 중..." : "등록"}
+              {isSaving ? "저장 중..." : editingId ? "수정" : "등록"}
             </Button>
           </DialogFooter>
         </DialogContent>

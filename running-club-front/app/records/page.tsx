@@ -272,7 +272,7 @@ export default function RecordsPage() {
 
       {/* 기록 추가 모달 */}
       <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
-        <DialogContent className="bg-[#1a1c23] border-[#2a2d37] text-white max-w-sm">
+        <DialogContent className="bg-[#1a1c23] border-[#2a2d37] text-white max-w-sm max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg">러닝 기록 추가</DialogTitle>
             <DialogDescription className="text-gray-400">오늘 달린 기록을 인증해주세요.</DialogDescription>
