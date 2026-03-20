@@ -115,7 +115,10 @@ app/ranking/              랭킹 — 개인순위(전 기간 누적) → TeamBat
                           READY 대회: "곧 시작" 안내 표시
 app/competition/          대회 목록 + 상세
 app/records/              기록 업로드 (분+초 분리 입력, 페이스 실시간 미리보기)
+                          기록 추가 모달: max-h-[85vh] + overflow-y-auto (작은 화면 스크롤)
+app/notices/[id]/         공지 상세 — react-markdown + remark-gfm 마크다운 렌더링
 app/admin/                관리자 대시보드 (기록승인/대회관리/공지관리/회원관리)
+app/admin/notices/        공지 관리 — 생성/수정/삭제 + 마크다운 미리보기 탭 (작성↔미리보기 토글)
 app/admin/members/        회원 관리 — 팀·조 배정
 ```
 
@@ -176,7 +179,7 @@ interface AuthUser {
 
 **인증**: `/join`, `/api/auth/login`, `/api/auth/first-login`, `/api/auth/setup-account`, `/api/me`, `/logout`
 
-**관리자**: `/api/admin/competitions/**`, `/api/admin/teams/**`, `/api/admin/groups/**`, `/api/admin/records/{id}/approve|reject`, `/api/admin/notices/**`, `/api/admin/members` (GET), `/api/admin/members/{id}/assign` (PATCH)
+**관리자**: `/api/admin/competitions/**`, `/api/admin/teams/**`, `/api/admin/groups/**`, `/api/admin/records/{id}/approve|reject`, `/api/admin/notices/**` (POST 생성, PATCH 수정, DELETE 삭제), `/api/admin/members` (GET), `/api/admin/members/{id}/assign` (PATCH)
 
 **공개**: `/api/competitions`, `/api/competitions/active`, `/api/competitions/active/battle`, `/api/competitions/{id}/teams`, `/api/teams/{id}/groups`, `/api/ranking/teams|groups|members`, `/api/records/team/**`, `/api/records/group/**`, `/api/records/recent`, `/api/notices/**`
 
@@ -185,6 +188,11 @@ interface AuthUser {
 **멤버 프로필**: `GET /api/members/{id}/profile`, `GET /api/groups/{id}/members`
 
 ---
+
+## 배포 주의사항
+- **Vercel (프론트)**: git push 시 자동 배포
+- **Oracle VM (백엔드)**: 수동 배포 필요 — git push만으로는 반영 안 됨, SSH 접속 후 재배포 필수
+- 백엔드 변경 후 반드시 Oracle VM 재배포 확인할 것 (과거 날짜 필터 미반영 사고 있었음)
 
 ## 미구현
 - first_login_candidates 관리 UI (현재 Supabase에서 직접 INSERT)
