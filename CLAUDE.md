@@ -115,7 +115,8 @@ app/ranking/              랭킹 — 개인순위(전 기간 누적) → TeamBat
                           READY 대회: "곧 시작" 안내 표시
 app/competition/          대회 목록 + 상세
 app/records/              기록 업로드 (분+초 분리 입력, 페이스 실시간 미리보기)
-                          기록 추가 모달: max-h-[85vh] + overflow-y-auto (작은 화면 스크롤)
+                          기록 추가 모달: 모바일 하단 시트 + 데스크톱 중앙 모달
+                          폼 영역만 스크롤, 제출 버튼 하단 고정
 app/notices/[id]/         공지 상세 — react-markdown + remark-gfm 마크다운 렌더링
 app/admin/                관리자 대시보드 (기록승인/대회관리/공지관리/회원관리)
 app/admin/notices/        공지 관리 — 생성/수정/삭제 + 마크다운 미리보기 탭 (작성↔미리보기 토글)
