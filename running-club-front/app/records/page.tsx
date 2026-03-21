@@ -272,12 +272,12 @@ export default function RecordsPage() {
 
       {/* 기록 추가 모달 */}
       <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
-        <DialogContent className="bg-[#1a1c23] border-[#2a2d37] text-white max-w-sm max-h-[85vh] overflow-y-auto">
+        <DialogContent className="bg-[#1a1c23] border-[#2a2d37] text-white max-w-sm !top-auto !bottom-0 !translate-y-0 sm:!top-1/2 sm:!bottom-auto sm:!-translate-y-1/2 max-h-[90vh] sm:max-h-[85vh] flex flex-col rounded-t-2xl sm:rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-lg">러닝 기록 추가</DialogTitle>
             <DialogDescription className="text-gray-400">오늘 달린 기록을 인증해주세요.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-5 py-2">
+          <div className="space-y-5 py-2 overflow-y-auto flex-1 min-h-0">
             {/* 거리 */}
             <div className="space-y-2">
               <Label className="text-gray-400 text-xs font-semibold">거리</Label>
