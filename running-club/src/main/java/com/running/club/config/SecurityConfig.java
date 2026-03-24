@@ -28,7 +28,7 @@ public class SecurityConfig {
 	                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
 	                    // 1. 누구나 접근 가능한 경로
-	                    .requestMatchers("/h2-console/**", "/join", "/login", "/css/**", "/js/**", "/photos/**").permitAll()
+	                    .requestMatchers("/h2-console/**", "/join", "/login", "/css/**", "/js/**", "/photos/**", "/actuator/prometheus").permitAll()
 
 	                    // 2. JSON 인증 API (최초 로그인 / 일반 로그인 / 계정 설정)
 	                    .requestMatchers("/api/auth/first-login", "/api/auth/login", "/api/auth/setup-account").permitAll()
