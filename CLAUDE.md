@@ -198,8 +198,45 @@ interface AuthUser {
 ## 미구현
 - first_login_candidates 관리 UI (현재 Supabase에서 직접 INSERT)
 
-## 모니터링
-`GET /actuator/prometheus`
+## 모니터링 (Prometheus + Grafana)
+
+### 구성
+```
+Spring Boot Actuator + Micrometer → Prometheus (5초 스크래핑) → Grafana (시각화)
+```
+
+### 설정 파일
+- `running-club/src/main/resources/docker-compose.yml` — Prometheus(:9090) + Grafana(:3100)
+- `running-club/src/main/resources/prometheus.yml` — 스크래핑 대상: `/actuator/prometheus`
+- `extra_hosts: host.docker.internal:host-gateway` — Linux Docker에서 호스트 Spring Boot 접근
+
+### 접속
+- Prometheus: http://217.142.231.239:9090
+- Grafana: http://217.142.231.239:3100 (기본 로그인: admin/admin)
+- Grafana 대시보드: Import ID `19004` (Spring Boot 3.x + Micrometer)
+- 메트릭 엔드포인트: `GET /actuator/prometheus`
+
+### 설치/재시작 과정 (Oracle VM)
+```bash
+# Docker 설치 (최초 1회)
+sudo apt update && sudo apt install -y docker.io docker-compose-v2
+sudo systemctl enable --now docker
+
+# 포트 오픈 (최초 1회)
+# 1) Oracle Cloud Console → VCN → Security List → Ingress에 9090, 3100 추가
+# 2) VM iptables — REJECT 규칙 앞에 삽입
+sudo iptables -L INPUT --line-numbers   # REJECT 번호 확인
+sudo iptables -I INPUT {REJECT번호} -p tcp --dport 9090 -j ACCEPT
+sudo iptables -I INPUT {REJECT번호+1} -p tcp --dport 3100 -j ACCEPT
+sudo netfilter-persistent save
+
+# 실행/재시작
+cd /opt/nd-running/running-club/src/main/resources
+sudo docker compose up -d        # 시작
+sudo docker compose restart      # 재시작
+sudo docker compose down          # 중지
+sudo docker compose logs -f       # 로그
+```
 
 ---
 
@@ -213,6 +250,7 @@ interface AuthUser {
 | DB | Supabase PostgreSQL | **운영 중** |
 | 도메인 | DuckDNS (nd-running-club.duckdns.org) | 설정 완료 (217.142.231.239) |
 | HTTPS | Let's Encrypt (Certbot + Nginx) | **설정 완료** |
+| 모니터링 | Prometheus + Grafana (Docker Compose on Oracle VM) | **운영 중** (9090/3100) |
 
 ### Vercel 배포 설정 (최신)
 

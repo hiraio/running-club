@@ -377,6 +377,116 @@ Oracle Cloud 콘솔도 확인:
 
 ---
 
+### 10. Prometheus + Grafana 모니터링 설정
+
+Oracle Cloud VM에 Docker Compose로 Prometheus + Grafana를 띄워 Spring Boot 앱을 모니터링하는 과정에서 겪은 트러블슈팅.
+
+#### 전체 구조
+```
+Spring Boot (Actuator + Micrometer)
+     │  /actuator/prometheus (메트릭 노출)
+     ▼
+Prometheus (Docker, :9090) ── 5초마다 스크래핑
+     │
+     ▼
+Grafana (Docker, :3100) ── 대시보드 시각화
+```
+
+#### 설정 파일
+- `running-club/src/main/resources/docker-compose.yml` — Prometheus + Grafana 컨테이너 정의
+- `running-club/src/main/resources/prometheus.yml` — 스크래핑 대상 설정
+
+#### 트러블슈팅 1: Grafana 포트 충돌
+**문제**: Grafana 기본 포트 3000이 Next.js 개발 서버(3000)와 충돌.
+**해결**: `docker-compose.yml`에서 Grafana 포트를 `3100:3000`으로 변경.
+
+#### 트러블슈팅 2: Linux Docker에서 host.docker.internal 미지원
+**문제**: `prometheus.yml`의 타겟이 `host.docker.internal:8080`인데, Linux Docker는 이 호스트명을 기본 지원하지 않음.
+**해결**: `docker-compose.yml`의 prometheus 서비스에 `extra_hosts` 추가:
+```yaml
+extra_hosts:
+  - "host.docker.internal:host-gateway"
+```
+
+#### 트러블슈팅 3: Oracle Cloud 포트 오픈 (2단계)
+**문제**: Docker Compose를 실행해도 외부에서 9090, 3100 포트에 접속 불가.
+**해결**:
+
+**1단계 — Oracle Cloud Console (Security List)**:
+VCN → Subnets → Security Lists → Add Ingress Rules:
+| Source CIDR | Protocol | Dest Port |
+|---|---|---|
+| `0.0.0.0/0` | TCP | `9090` |
+| `0.0.0.0/0` | TCP | `3100` |
+
+**2단계 — VM iptables (REJECT 앞에 삽입)**:
+```bash
+sudo iptables -L INPUT --line-numbers   # REJECT 번호 확인
+sudo iptables -I INPUT {REJECT번호} -p tcp --dport 9090 -j ACCEPT
+sudo iptables -I INPUT {REJECT번호+1} -p tcp --dport 3100 -j ACCEPT
+sudo netfilter-persistent save
+```
+⚠️ `-A`(append)가 아닌 `-I`(insert)로 REJECT 규칙 **앞에** 삽입해야 함. 뒤에 추가하면 REJECT가 먼저 적용되어 차단됨.
+
+#### 트러블슈팅 4: Docker 미설치
+**문제**: Oracle VM에 Docker가 기본 설치되어 있지 않음.
+**해결**:
+```bash
+sudo apt update && sudo apt install -y docker.io docker-compose-v2
+sudo systemctl enable --now docker
+```
+
+#### 트러블슈팅 5: Prometheus 401 Unauthorized — Spring Security 차단
+**문제**: Prometheus가 `/actuator/prometheus`를 스크래핑하려 하면 Spring Security가 401 반환. Targets 페이지에서 DOWN 표시.
+**원인**: `/actuator/**` 경로가 Spring Security의 `anyRequest().authenticated()`에 걸림.
+**해결 — Actuator 전용 SecurityFilterChain 분리**:
+```java
+@Bean
+@Order(1)
+public SecurityFilterChain actuatorFilterChain(HttpSecurity http) throws Exception {
+    http.securityMatcher("/actuator/**")
+        .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+        .csrf(csrf -> csrf.disable());
+    return http.build();
+}
+```
+단순히 `requestMatchers("/actuator/**").permitAll()`로는 해결되지 않았음. Spring Boot 3에서 Actuator 엔드포인트는 메인 Security 필터체인과 별도로 처리될 수 있어, `@Order(1)`로 우선순위가 높은 별도 필터체인을 만들어야 함.
+
+#### 트러블슈팅 6: 운영(prod) 프로필에서 Prometheus 엔드포인트 비활성화
+**문제**: `application.properties`에는 `management.endpoints.web.exposure.include=prometheus,health,info`가 있지만, `application-prod.properties`에는 `management.endpoints.web.exposure.include=health`만 있어서 운영 환경에서 `/actuator/prometheus` 엔드포인트가 노출되지 않음.
+**해결**: `application-prod.properties` 수정:
+```properties
+management.endpoints.web.exposure.include=prometheus,health,info
+```
+
+#### 트러블슈팅 7: git pull만 하고 빌드(mvnw package) 누락
+**문제**: 서버에서 `git pull` 후 `sudo systemctl restart nd-running`만 실행. 코드는 최신인데 이전 jar로 실행되어 변경사항 미반영.
+**원인**: Java는 소스코드를 직접 실행하지 않음. `.java` → `.jar`로 빌드해야 함.
+**해결**: 서버 재배포 시 반드시 빌드 포함:
+```bash
+cd /opt/nd-running && git pull origin main
+cd running-club && ./mvnw clean package -DskipTests
+sudo systemctl restart nd-running
+```
+`mvnw package`는 프론트엔드의 `npm run build`와 같은 역할. 소스코드를 실행 가능한 jar 파일로 컴파일하는 단계.
+
+#### 트러블슈팅 8: Grafana 대시보드 Import 실패 (DS_RPOMETHEUS)
+**문제**: 대시보드 ID `4701`(JVM Micrometer) Import 시 `datasource &{DS_RPOMETHEUS} was not found` 에러.
+**원인**: 대시보드 템플릿 자체의 오타 — `DS_PROMETHEUS`가 아닌 `DS_RPOMETHEUS`로 되어 있음.
+**해결**: 대시보드 ID `19004`(Spring Boot 3.x + Micrometer)로 대체하여 Import 성공.
+
+#### Grafana 초기 설정 순서
+1. **데이터소스 추가**: Connections → Data sources → Add data source → Prometheus → URL: `http://prometheus:9090` → Save & Test
+2. **대시보드 Import**: Dashboards → New → Import → ID `19004` → Load → Prometheus 데이터소스 선택 → Import
+
+**깨달은 점**:
+- Spring Security와 Actuator의 보안은 별도로 처리해야 한다. 메인 필터체인의 `permitAll()`이 Actuator에 적용되지 않을 수 있다.
+- `application-prod.properties`가 `application.properties`를 오버라이드하므로, 운영 환경에서 필요한 설정은 반드시 prod 프로필에도 명시해야 한다.
+- Java 배포는 `git pull → 빌드(mvnw package) → 재시작` 3단계. 빌드를 빠뜨리면 이전 코드로 실행된다.
+- Grafana 커뮤니티 대시보드는 오타/호환성 문제가 있을 수 있다. 안 되면 다른 ID로 시도하자.
+
+---
+
 ## 응답 포맷
 
 공개 API:
