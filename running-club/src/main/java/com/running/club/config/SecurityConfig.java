@@ -13,12 +13,24 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.core.annotation.Order;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+	// Actuator 전용 필터체인 — 메인보다 우선 적용
 	@Bean
+	@Order(1)
+	public SecurityFilterChain actuatorFilterChain(HttpSecurity http) throws Exception {
+		http.securityMatcher("/actuator/**")
+			.authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+			.csrf(csrf -> csrf.disable());
+		return http.build();
+	}
+
+	@Bean
+	@Order(2)
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 	    http.cors(Customizer.withDefaults())
 	            .csrf(csrf -> csrf.disable())
