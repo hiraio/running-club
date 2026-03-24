@@ -4,13 +4,15 @@ services:
     image: prom/prometheus
     container_name: prometheus
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml # 내 설정파일을 도커 상자 안으로 집어넣음
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
-      - "9090:9090" # 내 컴퓨터의 9090 포트로 접속하면 상자의 9090으로 연결
+      - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Linux Docker에서 호스트 머신 접근용
 
   # 2번 상자: 그라파나 (데이터 시각화/대시보드)
   grafana:
     image: grafana/grafana
     container_name: grafana
     ports:
-      - "3000:3000" # 내 컴퓨터의 3000 포트로 접속
+      - "3100:3000"
