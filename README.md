@@ -103,6 +103,18 @@ cd running-club-front && npm run dev
 - READY 대회: "곧 시작" 안내 + D-day 카운트다운
 - PROCEEDING 대회: 팀 배틀 스코어보드 + 기여도 차트
 
+### 빙고 챌린지
+- 3x3 빙고판 — 관리자가 생성, 조별 미션 달성 경쟁
+- 사진 인증 제출 (최대 5장) → 관리자 승인/거절 → 빙고판에 반영
+- 4가지 상태: 미제출 / 심사중 / 달성완료 / 반려 (재제출 가능)
+- 다른 조 빙고판 탭 전환으로 구경 가능
+- 빙고 라인 자동 감지 + 조별 현황 요약
+
+### 미확인 공지 알림
+- 읽지 않은 공지가 있으면 상단에 알림 배너 자동 표시
+- 공지 상세 페이지 진입 시 읽음 처리 (localStorage 기반)
+- X 버튼으로 배너 닫기 가능
+
 ### 멤버 프로필
 - 이름 클릭 → `/members/{id}` 프로필 페이지 (통계 + 최근 기록 5건)
 - 조 기여도 카드 클릭 → 조 멤버 목록 Sheet
@@ -129,6 +141,7 @@ cd running-club-front && npm run dev
 /competition/[id]   대회 상세 (팀 목록 · 랭킹 링크)
 /records            기록 업로드
 /my-records         내 기록 조회
+/bingo              빙고 챌린지 (3x3 빙고판, 조별 인증)
 /notices            공지사항
 /login              로그인 (일반 + 최초 로그인)
 /setup-account      계정 설정 (최초 로그인 후)
@@ -139,6 +152,7 @@ cd running-club-front && npm run dev
 /admin/teams/[id]   팀·조 관리
 /admin/notices      공지 관리
 /admin/members      회원 관리 (팀·조 배정)
+/admin/bingo        빙고 관리 (인증 승인/거절 + 빙고판 생성)
 ```
 
 ---
@@ -165,6 +179,7 @@ cd running-club-front && npm run dev
 | GET | `/api/ranking/groups` | 조 랭킹 |
 | GET | `/api/records/recent` | 활동 피드 |
 | GET | `/api/notices` | 공지사항 |
+| GET | `/api/bingo/board` | 빙고판 + 미션 + 제출현황 |
 
 ### 인증 필요
 | Method | Endpoint | 설명 |
@@ -175,6 +190,7 @@ cd running-club-front && npm run dev
 | GET/PUT | `/api/me/profile` | 프로필 조회/수정 |
 | GET | `/api/members/{id}/profile` | 멤버 프로필 |
 | GET | `/api/groups/{id}/members` | 조 멤버 목록 |
+| POST | `/api/bingo/submit` | 빙고 인증 제출 (multipart, 최대 5장) |
 
 ### 관리자
 | Method | Endpoint | 설명 |
@@ -186,6 +202,9 @@ cd running-club-front && npm run dev
 | CRUD | `/api/admin/notices/**` | 공지 관리 |
 | GET | `/api/admin/members` | 회원 목록 |
 | PATCH | `/api/admin/members/{id}/assign` | 팀·조 배정 |
+| POST | `/api/admin/bingo/board` | 빙고판 생성 |
+| GET | `/api/admin/bingo/pending` | 대기중 인증 목록 |
+| PATCH | `/api/admin/bingo/{id}/approve\|reject` | 빙고 인증 승인/거절 |
 
 ---
 

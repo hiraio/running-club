@@ -20,6 +20,7 @@ cd running-club-front && npm run dev             # 프론트엔드 실행
 ### 도메인 계층
 ```
 Competition → Team → RunningGroup → Member → RunningRecord
+BingoBoard → BingoMission → BingoSubmission (+ bingo_submission_photos)
 ```
 
 ### 핵심 설계 규칙
@@ -81,6 +82,7 @@ OPTIONS /**, /h2-console/**, /join, /login, /photos/**
 - **로컬**: H2 파일 DB (`~/runningdb`), `ddl-auto=update`
 - **운영**: PostgreSQL (Supabase) — `application-prod.properties`
 - `DataInitializer.java` 삭제됨 — 개발용 테스트 데이터 초기화 기능 제거 (더 이상 사용하지 않음)
+- `BingoDataInitializer.java` — `@Profile("!prod")` 로컬 전용 빙고 테스트 데이터 초기화 (빙고판+미션+조별 달성현황). `boardRepo.count() > 0`이면 스킵
 
 ---
 
@@ -168,6 +170,51 @@ interface AuthUser {
 | **그 외 모든 경로** | 로그인 필수 — 미인증 시 `/login` 리다이렉트 |
 | `/admin/**` | ADMIN 필요, USER → `/dashboard` |
 | ADMIN이 `/admin` 외 접근 | → `/admin` 리다이렉트 |
+
+---
+
+## 빙고 챌린지
+
+### 구조
+- **BingoBoard**: 빙고판 (제목, 기간). 대회와 독립 — 한 학기 1회 행사
+- **BingoMission**: 미션 9개 (3x3, position 0~8). unique(board_id, position)
+- **BingoSubmission**: 조별 미션 인증. unique(mission_id, group_id). 상태: PENDING → APPROVED/REJECTED
+- **bingo_submission_photos**: `@ElementCollection` — 사진 URL 최대 5개 (PostgreSQL TEXT[] 대신 H2 호환)
+
+### 빙고판 position 배치
+```
+0 | 1 | 2
+3 | 4 | 5
+6 | 7 | 8
+```
+
+### 빙고 라인 (프론트 계산)
+```
+가로: [0,1,2] [3,4,5] [6,7,8]
+세로: [0,3,6] [1,4,7] [2,5,8]
+대각: [0,4,8] [2,4,6]
+```
+
+### 플로우
+1. 관리자: 빙고판 생성 (`/admin/bingo` → 빙고판 생성 탭)
+2. 사용자: 미완료 칸 클릭 → 사진 첨부 → 제출 (`POST /api/bingo/submit`)
+3. 관리자: 인증 관리 탭에서 승인/거절 (거절 시 사유 필수)
+4. 사용자: 거절 시 사유 확인 후 재제출 가능
+
+### 주의사항
+- `boardRepo.findFirstByOrderByCreatedAtDesc()` — JPQL LIMIT 대신 메서드명 쿼리 사용 (PostgreSQL 호환)
+- `/api/bingo/board` 응답에 `groups` 필드 포함 — submission 없는 조도 탭에 표시
+- 사진은 Oracle VM 로컬 파일시스템에 저장 (Supabase에 저장하지 않음)
+
+---
+
+## 미확인 공지 알림
+
+- `UnreadNoticeBanner.tsx` — 읽지 않은 공지가 있으면 상단 배너 표시
+- `localStorage.readNoticeIds` — 읽은 공지 id 배열 저장
+- 공지 상세 진입 시 `markNoticeAsRead(id)` 호출
+- 공지 페이지(`/notices`)에서는 배너 미표시
+- `NavigationWrapper`의 `ContentWrapper`에 삽입됨
 
 ---
 
