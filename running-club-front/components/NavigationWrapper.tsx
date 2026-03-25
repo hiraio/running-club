@@ -7,7 +7,7 @@ import { MobileTopBar } from "./MobileTopBar";
 import { useAuth } from "@/lib/auth-context";
 
 // 로그인 사용자에게 UserSidebar를 보여줄 경로들
-const USER_SIDEBAR_PAGES = ["/", "/dashboard", "/competition", "/records", "/ranking", "/notices"];
+const USER_SIDEBAR_PAGES = ["/", "/dashboard", "/competition", "/records", "/ranking", "/bingo", "/notices"];
 
 // 로그인 사용자에게 MobileTopBar(뒤로가기)만 보여줄 경로 패턴 (사이드바 없음)
 const MINIMAL_NAV_PATTERNS = [/^\/members\/.+$/];

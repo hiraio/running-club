@@ -164,10 +164,9 @@ function HighlightCard({
         className="shrink-0 rounded-lg px-2 py-1 text-center"
         style={{ background: `${displayColor}15` }}
       >
-        <span className="text-sm font-black tabular-nums block" style={{ color: displayColor }}>
-          {highlight.value.toFixed(1)}
+        <span className="text-sm font-black tabular-nums whitespace-nowrap" style={{ color: displayColor }}>
+          {Math.round(highlight.value)}{valueSuffix}
         </span>
-        <span className="text-[9px] text-muted-foreground">{valueSuffix}</span>
       </div>
     </div>
   );

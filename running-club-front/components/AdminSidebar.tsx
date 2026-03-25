@@ -9,6 +9,7 @@ import {
   LogOut,
   Bell,
   Users,
+  Grid3X3,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ const navItems = [
   { href: "/admin/members", label: "회원 관리", icon: Users },
   { href: "/admin/approvals", label: "기록 승인", icon: ClipboardCheck },
   { href: "/admin/competitions", label: "대회 관리", icon: Trophy },
+  { href: "/admin/bingo", label: "빙고 관리", icon: Grid3X3 },
   { href: "/admin/notices", label: "공지사항", icon: Bell },
 ];
 

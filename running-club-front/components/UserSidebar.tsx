@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Trophy, ClipboardList, LayoutDashboard, LogOut, Swords, Bell, Home, MoreHorizontal } from "lucide-react";
+import { Trophy, ClipboardList, LayoutDashboard, LogOut, Swords, Bell, Home, MoreHorizontal, Grid3X3 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { getNotices } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ const navItems = [
   { href: "/competition", label: "대회 현황",  icon: Swords },
   { href: "/records",     label: "내 기록",    icon: ClipboardList },
   { href: "/ranking",     label: "랭킹",       icon: Trophy },
+  { href: "/bingo",       label: "빙고",       icon: Grid3X3 },
   { href: "/notices",     label: "공지사항",   icon: Bell },
 ];
 
@@ -23,6 +24,7 @@ const navItems = [
 const mainNavItems = [
   { href: "/",          label: "홈",         icon: Home },
   { href: "/ranking",   label: "랭킹",       icon: Trophy },
+  { href: "/bingo",     label: "빙고",       icon: Grid3X3 },
   { href: "/records",   label: "내 기록",    icon: ClipboardList },
   { href: "/dashboard", label: "마이페이지", icon: LayoutDashboard },
 ];

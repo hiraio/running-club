@@ -203,7 +203,7 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
 
     /**
      * 최신 APPROVED 기록 N건 (피드 타임라인용).
-     * createdAt DESC 정렬 — 가장 최근 승인 기록부터 반환.
+     * verifiedAt DESC 정렬 — 가장 최근 승인된 기록부터 반환.
      * Pageable(0, 10) 으로 호출하면 최대 10건.
      */
     @Query("SELECT r FROM RunningRecord r " +
@@ -211,7 +211,7 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
            "LEFT JOIN FETCH m.team " +
            "LEFT JOIN FETCH m.runningGroup " +
            "WHERE r.status = 'APPROVED' " +
-           "ORDER BY r.createdAt DESC")
+           "ORDER BY r.verifiedAt DESC")
     List<RunningRecord> findLatestApproved(org.springframework.data.domain.Pageable pageable);
 
     /**
@@ -254,8 +254,8 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
     boolean hasRunToday(@Param("memberId") Integer memberId, @Param("today") LocalDate today);
 
     @Modifying
-    @Query("UPDATE RunningRecord r SET r.status = 'APPROVED', r.approvedBy = :admin, r.verifiedAt = :today WHERE r.id = :id AND r.status = 'WAITING'")
-    int approve(@Param("id") Integer id, @Param("admin") Member admin, @Param("today") LocalDate today);
+    @Query("UPDATE RunningRecord r SET r.status = 'APPROVED', r.approvedBy = :admin, r.verifiedAt = :now WHERE r.id = :id AND r.status = 'WAITING'")
+    int approve(@Param("id") Integer id, @Param("admin") Member admin, @Param("now") java.time.LocalDateTime now);
 
     @Modifying
     @Query("UPDATE RunningRecord r SET r.status = 'REJECTED', r.rejectedReason = :reason, r.approvedBy = :admin WHERE r.id = :id AND r.status = 'WAITING'")

@@ -10,7 +10,7 @@
 
 | 분류 | 기술 |
 |------|------|
-| Frontend | Next.js 15 (App Router), TypeScript, Tailwind CSS, shadcn/ui, Framer Motion |
+| Frontend | Next.js 15 (App Router), TypeScript, Tailwind CSS + Typography, shadcn/ui, Framer Motion |
 | Backend | Spring Boot 3.4, Java 17, Spring Data JPA, Spring Security 6 |
 | DB | H2 (로컬) / PostgreSQL Supabase (운영) |
 | 인증 | 세션 기반 (JSESSIONID 쿠키) + BCrypt |
@@ -59,14 +59,6 @@ cd running-club && ./mvnw spring-boot:run
 cd running-club-front && npm run dev
 ```
 
-**테스트 계정** (`app.init-test-data=true`일 때)
-
-| 계정 | 비밀번호 | 역할 |
-|------|----------|------|
-| admin | admin1234 | 관리자 |
-| user1 ~ user4 | user1234 | 일반 |
-| 이름: VIP테스터 / 전화: 010-9999-0001 | — | VIP (최초 로그인) |
-
 ---
 
 ## 핵심 흐름
@@ -102,10 +94,12 @@ cd running-club-front && npm run dev
 - **중복 사진 방지**: SHA-256 해시 비교
 - **속도 검증**: 45km/h 초과 시 업로드 거부
 - 관리자 승인(APPROVED) 후 랭킹에 반영
+- **활동 피드**: 승인 시각(`verifiedAt`) 기준 최신순 정렬 — 승인 즉시 피드에 노출
 
 ### 랭킹 & 배틀
 - 팀 랭킹 · 조별 기여도 · 개인 순위
 - **순위 변동** (▲▼NEW): `rank_snapshots` 테이블, 매일 자정 KST 갱신
+- **이번 주 급성장**: 양수 성장률만 표시 (정수%), 이번 주 > 지난 주인 사람만
 - READY 대회: "곧 시작" 안내 + D-day 카운트다운
 - PROCEEDING 대회: 팀 배틀 스코어보드 + 기여도 차트
 

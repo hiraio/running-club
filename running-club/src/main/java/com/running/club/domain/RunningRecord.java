@@ -60,7 +60,7 @@ public class RunningRecord {
     private LocalDateTime createdAt;
 
     @Column(name = "verified_at")
-    private LocalDate verifiedAt;
+    private LocalDateTime verifiedAt;
 
     @PrePersist
     protected void onCreate() { this.createdAt = LocalDateTime.now(); }

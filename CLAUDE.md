@@ -71,6 +71,7 @@ OPTIONS /**, /h2-console/**, /join, /login, /photos/**
 /api/records/team/**, /api/records/group/**, /api/records/recent
 /api/ranking/**, /api/competitions/**, /api/teams/**
 /api/notices/**
+/api/bingo/board
 ```
 
 ---
@@ -79,8 +80,7 @@ OPTIONS /**, /h2-console/**, /join, /login, /photos/**
 
 - **로컬**: H2 파일 DB (`~/runningdb`), `ddl-auto=update`
 - **운영**: PostgreSQL (Supabase) — `application-prod.properties`
-- **`app.init-test-data=false`**: 재시작 시 데이터 유지. `true`로 바꾸면 전체 초기화 후 테스트 계정 생성
-  - 테스트 계정: `admin/admin1234`, `user1~4/user1234`, VIP: 이름=VIP테스터 전화=010-9999-0001
+- `DataInitializer.java` 삭제됨 — 개발용 테스트 데이터 초기화 기능 제거 (더 이상 사용하지 않음)
 
 ---
 
@@ -117,10 +117,12 @@ app/competition/          대회 목록 + 상세
 app/records/              기록 업로드 (분+초 분리 입력, 페이스 실시간 미리보기)
                           기록 추가 모달: 모바일 하단 시트 + 데스크톱 중앙 모달
                           폼 영역만 스크롤, 제출 버튼 하단 고정
-app/notices/[id]/         공지 상세 — react-markdown + remark-gfm 마크다운 렌더링
+app/notices/[id]/         공지 상세 — react-markdown + remark-gfm + @tailwindcss/typography 마크다운 렌더링
 app/admin/                관리자 대시보드 (기록승인/대회관리/공지관리/회원관리)
 app/admin/notices/        공지 관리 — 생성/수정/삭제 + 마크다운 미리보기 탭 (작성↔미리보기 토글)
 app/admin/members/        회원 관리 — 팀·조 배정
+app/bingo/                빙고 — 3x3 빙고판, 조 탭 전환, 미션 인증 제출 (사진 최대 5장)
+app/admin/bingo/          빙고 관리 — 인증 승인/거절 + 빙고판 생성
 ```
 
 ### 엔디(Endi) 캐릭터
@@ -169,6 +171,15 @@ interface AuthUser {
 
 ---
 
+## 활동 피드 (`/api/records/recent`)
+
+- **정렬 기준**: `verifiedAt DESC` (관리자 승인 시각 기준, 기록 제출 시각이 아님)
+- **`verifiedAt`**: `LocalDateTime` — 승인 시 `LocalDateTime.now()` 저장
+- **급성장(Rising Star)**: 이번 주 vs 지난 주 성장률 1위. 양수 성장만 표시 (음수 제외), 정수(%) 표시
+- **Daily King**: 오늘 APPROVED 누적 거리 1위 (대회 무관)
+
+---
+
 ## 순위 스냅샷 (`rank_snapshots`)
 
 랭킹 변동(▲/▼/NEW) 표시용. `RankScheduler` — 서버 시작 시 1회 + 매일 자정 KST 실행.
@@ -180,11 +191,11 @@ interface AuthUser {
 
 **인증**: `/join`, `/api/auth/login`, `/api/auth/first-login`, `/api/auth/setup-account`, `/api/me`, `/logout`
 
-**관리자**: `/api/admin/competitions/**`, `/api/admin/teams/**`, `/api/admin/groups/**`, `/api/admin/records/{id}/approve|reject`, `/api/admin/notices/**` (POST 생성, PATCH 수정, DELETE 삭제), `/api/admin/members` (GET), `/api/admin/members/{id}/assign` (PATCH)
+**관리자**: `/api/admin/competitions/**`, `/api/admin/teams/**`, `/api/admin/groups/**`, `/api/admin/records/{id}/approve|reject`, `/api/admin/notices/**` (POST 생성, PATCH 수정, DELETE 삭제), `/api/admin/members` (GET), `/api/admin/members/{id}/assign` (PATCH), `/api/admin/bingo/board` (POST 생성), `/api/admin/bingo/pending` (GET), `/api/admin/bingo/{id}/approve|reject` (PATCH)
 
-**공개**: `/api/competitions`, `/api/competitions/active`, `/api/competitions/active/battle`, `/api/competitions/{id}/teams`, `/api/teams/{id}/groups`, `/api/ranking/teams|groups|members`, `/api/records/team/**`, `/api/records/group/**`, `/api/records/recent`, `/api/notices/**`
+**공개**: `/api/competitions`, `/api/competitions/active`, `/api/competitions/active/battle`, `/api/competitions/{id}/teams`, `/api/teams/{id}/groups`, `/api/ranking/teams|groups|members`, `/api/records/team/**`, `/api/records/group/**`, `/api/records/recent`, `/api/notices/**`, `/api/bingo/board`
 
-**인증 필요**: `POST /api/records`, `GET /api/records/my`, `GET /api/me/dashboard`, `GET /api/me/profile`, `PUT /api/me/profile`
+**인증 필요**: `POST /api/records`, `GET /api/records/my`, `GET /api/me/dashboard`, `GET /api/me/profile`, `PUT /api/me/profile`, `POST /api/bingo/submit` (multipart, 사진 최대 5장)
 
 **멤버 프로필**: `GET /api/members/{id}/profile`, `GET /api/groups/{id}/members`
 

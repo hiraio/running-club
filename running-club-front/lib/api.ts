@@ -32,6 +32,8 @@ import type {
   NoticeCreateRequest,
   NoticeUpdateRequest,
   RecentFeedResponse,
+  BingoBoardData,
+  BingoSubmissionDTO,
 } from "./types";
 
 // ============================================================
@@ -758,4 +760,85 @@ export const deleteNotice = async (id: number): Promise<void> => {
     method: "DELETE",
   });
   if (!res.ok) await handleError(res);
+};
+
+// ============================================================
+// 빙고
+// ============================================================
+
+/** GET /api/bingo/board — 빙고판 + 미션 + 전체 제출 현황 (인증 불필요) */
+export const getBingoBoard = async (): Promise<BingoBoardData> => {
+  const res = await fetch(`${BASE}/api/bingo/board`, DEFAULT_OPTS);
+  if (!res.ok) await handleError(res);
+  const body: ApiResponse<BingoBoardData> = await res.json();
+  return body.data;
+};
+
+/** POST /api/bingo/submit — 미션 인증 제출 (사진 최대 5장) */
+export const submitBingo = async (
+  missionId: number,
+  files: File[]
+): Promise<string> => {
+  const formData = new FormData();
+  formData.append("missionId", String(missionId));
+  files.forEach((f) => formData.append("files", f));
+
+  const res = await fetch(`${BASE}/api/bingo/submit`, {
+    method: "POST",
+    body: formData,
+    credentials: "include",
+  });
+  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "제출 실패");
+  }
+  return res.text();
+};
+
+/** POST /api/admin/bingo/board — 빙고판 생성 (관리자) */
+export const createBingoBoard = async (data: {
+  title: string;
+  startDate: string;
+  endDate: string;
+  missions: { position: number; title: string; description: string }[];
+}): Promise<BingoBoardData> => {
+  const res = await fetch(`${BASE}/api/admin/bingo/board`, {
+    ...DEFAULT_OPTS,
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleError(res);
+  return res.json();
+};
+
+/** GET /api/admin/bingo/pending — 대기중 인증 목록 (관리자) */
+export const getBingoPending = async (): Promise<BingoSubmissionDTO[]> => {
+  const res = await fetch(`${BASE}/api/admin/bingo/pending`, DEFAULT_OPTS);
+  if (!res.ok) await handleError(res);
+  return res.json();
+};
+
+/** PATCH /api/admin/bingo/{id}/approve — 승인 (관리자) */
+export const approveBingo = async (id: number): Promise<string> => {
+  const res = await fetch(`${BASE}/api/admin/bingo/${id}/approve`, {
+    ...DEFAULT_OPTS,
+    method: "PATCH",
+  });
+  if (!res.ok) await handleError(res);
+  return res.text();
+};
+
+/** PATCH /api/admin/bingo/{id}/reject — 반려 (관리자) */
+export const rejectBingo = async (
+  id: number,
+  reason: string
+): Promise<string> => {
+  const res = await fetch(
+    `${BASE}/api/admin/bingo/${id}/reject?reason=${encodeURIComponent(reason)}`,
+    { ...DEFAULT_OPTS, method: "PATCH" }
+  );
+  if (!res.ok) await handleError(res);
+  return res.text();
 };

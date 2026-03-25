@@ -128,7 +128,7 @@ public class RunningRecordService {
                         .distance(r.getDistance())
                         .duration(r.getDuration())
                         .runningDate(r.getRunningDate().toString())
-                        .createdAt(r.getCreatedAt())
+                        .createdAt(r.getVerifiedAt() != null ? r.getVerifiedAt() : r.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());
 
@@ -162,7 +162,7 @@ public class RunningRecordService {
         }
 
         RecentFeedResponse.FeedHighlight risingStar = null;
-        double maxGrowth = Double.NEGATIVE_INFINITY;
+        double maxGrowth = 0;
 
         for (Object[] row : thisWeekRows) {
             Integer memberId  = ((Number) row[0]).intValue();
@@ -173,13 +173,14 @@ public class RunningRecordService {
             if (lastKm == null || lastKm <= 0) continue;
 
             double growth = (thisKm - lastKm) / lastKm * 100.0;
+            // 양수 성장률만 표시 (이번 주가 지난 주보다 높은 사람만)
             if (growth > maxGrowth) {
                 maxGrowth  = growth;
                 risingStar = RecentFeedResponse.FeedHighlight.builder()
                         .userName((String) row[1])
                         .teamName(row[2] != null ? (String) row[2] : null)
                         .teamColorCode(row[3] != null ? (String) row[3] : null)
-                        .value(Math.round(growth * 10.0) / 10.0) // 소수점 1자리
+                        .value((double) Math.round(growth)) // 정수
                         .build();
             }
         }

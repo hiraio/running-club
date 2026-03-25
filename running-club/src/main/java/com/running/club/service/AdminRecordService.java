@@ -1,6 +1,7 @@
 package com.running.club.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -44,7 +45,7 @@ public class AdminRecordService {
 
     @Transactional
     public void approve(Integer recordId, Member admin) {
-        int updated = runningRecordRepository.approve(recordId, admin, LocalDate.now());
+        int updated = runningRecordRepository.approve(recordId, admin, LocalDateTime.now());
         if (updated == 0) {
             log.warn("[RECORD] 승인 실패 - recordId={} (없거나 이미 처리됨)", recordId);
             throw new IllegalStateException("승인 실패: 존재하지 않거나 이미 처리된 기록입니다. (id=" + recordId + ")");

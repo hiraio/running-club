@@ -12,6 +12,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/competition": "대회",
   "/records":     "내 기록",
   "/my-records":  "내 기록",
+  "/bingo":       "빙고",
   "/notices":     "공지사항",
 };
 

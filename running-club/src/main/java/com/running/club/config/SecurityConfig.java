@@ -52,6 +52,9 @@ public class SecurityConfig {
 	                    // 3-1. 공지사항 공개 조회 (인증 불필요)
 	                    .requestMatchers("/api/notices/**").permitAll()
 
+	                    // 3-2. 빙고판 공개 조회 (인증 불필요)
+	                    .requestMatchers("/api/bingo/board").permitAll()
+
 	                    // 4. 회원가입 지원 공개 조회 API (인증 불필요)
 	                    .requestMatchers("/api/competitions/**", "/api/teams/**").permitAll()
 

@@ -544,3 +544,43 @@ export interface RecentFeedResponse {
   dailyKing: FeedHighlight | null;
   risingStar: FeedHighlight | null;
 }
+
+// ============================================================
+// 빙고
+// ============================================================
+
+export type BingoSubmissionStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface BingoMissionDTO {
+  id: number;
+  position: number;
+  title: string;
+  description: string | null;
+}
+
+export interface BingoSubmissionDTO {
+  id: number;
+  missionId: number;
+  position: number;
+  missionTitle: string;
+  groupId: number;
+  groupName: string;
+  status: BingoSubmissionStatus;
+  submittedByName: string;
+  submittedAt: string | null;
+  verifiedAt: string | null;
+  rejectReason: string | null;
+  photoUrls: string[];
+}
+
+/** GET /api/bingo/board 응답 (ApiResponse.data) */
+export interface BingoBoardData {
+  boardId: number;
+  title: string;
+  size: number;
+  startDate: string;
+  endDate: string;
+  missions: BingoMissionDTO[];
+  submissions: BingoSubmissionDTO[];
+  groups: { groupId: number; groupName: string }[];
+}
