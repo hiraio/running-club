@@ -10,6 +10,7 @@ import type { NoticeDetail } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Bell, Pin, Megaphone, Calendar } from "lucide-react";
+import { markNoticeAsRead } from "@/components/UnreadNoticeBanner";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("ko-KR", {
@@ -33,6 +34,7 @@ export default function NoticeDetailPage() {
       try {
         const data = await getNotice(Number(id));
         setNotice(data);
+        markNoticeAsRead(Number(id));
       } catch {
         setError("공지사항을 불러올 수 없습니다.");
       } finally {

@@ -5,6 +5,7 @@ import { UserSidebar } from "./UserSidebar";
 import { AdminSidebar } from "./AdminSidebar";
 import { MobileTopBar } from "./MobileTopBar";
 import { useAuth } from "@/lib/auth-context";
+import UnreadNoticeBanner from "./UnreadNoticeBanner";
 
 // 로그인 사용자에게 UserSidebar를 보여줄 경로들
 const USER_SIDEBAR_PAGES = ["/", "/dashboard", "/competition", "/records", "/ranking", "/bingo", "/notices"];
@@ -64,6 +65,7 @@ function ContentWrapper({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="md:pl-[220px] pb-16 md:pb-0 pt-12 md:pt-0 min-h-screen">
+      <UnreadNoticeBanner />
       {children}
     </div>
   );
