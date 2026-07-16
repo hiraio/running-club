@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.running.club.domain.Competition;
-import com.running.club.domain.RankingDTO;
+import com.running.club.dto.ranking.RankingDTO;
 import com.running.club.repository.CompetitionRepository;
 import com.running.club.repository.RunningRecordRepository;
 

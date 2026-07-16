@@ -7,11 +7,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.running.club.domain.Competition;
-import com.running.club.domain.CompetitionForJoinDTO;
+import com.running.club.dto.auth.CompetitionForJoinDTO;
 import com.running.club.domain.CompetitionStatus;
-import com.running.club.domain.CompetitionSummaryDTO;
-import com.running.club.domain.GroupForJoinDTO;
-import com.running.club.domain.TeamForJoinDTO;
+import com.running.club.dto.competition.CompetitionSummaryDTO;
+import com.running.club.dto.auth.GroupForJoinDTO;
+import com.running.club.dto.auth.TeamForJoinDTO;
 import com.running.club.repository.CompetitionRepository;
 import com.running.club.repository.RunningGroupRepository;
 import com.running.club.repository.TeamRepository;

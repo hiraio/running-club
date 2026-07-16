@@ -7,10 +7,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.running.club.domain.Competition;
-import com.running.club.domain.CompetitionCreateRequest;
-import com.running.club.domain.CompetitionResponse;
-import com.running.club.domain.CompetitionSummaryDTO;
-import com.running.club.domain.CompetitionUpdateRequest;
+import com.running.club.dto.competition.CompetitionCreateRequest;
+import com.running.club.dto.competition.CompetitionResponse;
+import com.running.club.dto.competition.CompetitionSummaryDTO;
+import com.running.club.dto.competition.CompetitionUpdateRequest;
 import com.running.club.repository.CompetitionRepository;
 
 import lombok.RequiredArgsConstructor;

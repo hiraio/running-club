@@ -11,13 +11,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.running.club.domain.RunningGroupCreateRequest;
-import com.running.club.domain.RunningGroupResponse;
-import com.running.club.domain.RunningGroupUpdateRequest;
-import com.running.club.domain.TeamCreateRequest;
-import com.running.club.domain.TeamResponse;
-import com.running.club.domain.TeamSummaryDTO;
-import com.running.club.domain.TeamUpdateRequest;
+import com.running.club.dto.competition.RunningGroupCreateRequest;
+import com.running.club.dto.competition.RunningGroupResponse;
+import com.running.club.dto.competition.RunningGroupUpdateRequest;
+import com.running.club.dto.competition.TeamCreateRequest;
+import com.running.club.dto.competition.TeamResponse;
+import com.running.club.dto.competition.TeamSummaryDTO;
+import com.running.club.dto.competition.TeamUpdateRequest;
 import com.running.club.service.AdminTeamService;
 
 import lombok.RequiredArgsConstructor;

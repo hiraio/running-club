@@ -7,12 +7,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.running.club.domain.ApiResponse;
-import com.running.club.domain.CompetitionBattleResponse;
-import com.running.club.domain.CompetitionForJoinDTO;
-import com.running.club.domain.CompetitionSummaryDTO;
-import com.running.club.domain.GroupForJoinDTO;
-import com.running.club.domain.TeamForJoinDTO;
+import com.running.club.dto.common.ApiResponse;
+import com.running.club.dto.competition.CompetitionBattleResponse;
+import com.running.club.dto.auth.CompetitionForJoinDTO;
+import com.running.club.dto.competition.CompetitionSummaryDTO;
+import com.running.club.dto.auth.GroupForJoinDTO;
+import com.running.club.dto.auth.TeamForJoinDTO;
 import com.running.club.service.CompetitionBattleService;
 import com.running.club.service.PublicCompetitionService;
 

@@ -13,9 +13,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.running.club.domain.CustomUserDetails;
-import com.running.club.domain.RecentFeedResponse;
-import com.running.club.domain.RunningRecordDTO;
+import com.running.club.security.CustomUserDetails;
+import com.running.club.dto.record.RecentFeedResponse;
+import com.running.club.dto.record.RunningRecordDTO;
 import com.running.club.service.RunningRecordService;
 
 import lombok.RequiredArgsConstructor;

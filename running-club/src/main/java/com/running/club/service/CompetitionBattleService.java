@@ -1,6 +1,11 @@
 package com.running.club.service;
 
-import com.running.club.domain.*;
+import com.running.club.domain.Competition;
+import com.running.club.dto.competition.CompetitionBattleResponse;
+import com.running.club.domain.CompetitionStatus;
+import com.running.club.dto.ranking.GroupContributionDTO;
+import com.running.club.dto.competition.TeamSummaryDTO;
+import com.running.club.dto.record.TodayMvpDTO;
 import com.running.club.repository.CompetitionRepository;
 import com.running.club.repository.MemberRepository;
 import com.running.club.repository.RunningRecordRepository;

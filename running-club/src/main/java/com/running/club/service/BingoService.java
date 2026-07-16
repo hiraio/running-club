@@ -9,8 +9,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.running.club.domain.*;
-import com.running.club.repository.*;
+import com.running.club.domain.BingoBoard;
+import com.running.club.dto.bingo.BingoBoardResponse;
+import com.running.club.domain.BingoMission;
+import com.running.club.domain.BingoSubmission;
+import com.running.club.domain.BingoSubmissionStatus;
+import com.running.club.domain.Member;
+import com.running.club.repository.BingoBoardRepository;
+import com.running.club.repository.BingoMissionRepository;
+import com.running.club.repository.BingoSubmissionRepository;
+import com.running.club.repository.MemberRepository;
+import com.running.club.repository.RunningGroupRepository;
 import com.running.club.util.FileUtil;
 
 import lombok.RequiredArgsConstructor;

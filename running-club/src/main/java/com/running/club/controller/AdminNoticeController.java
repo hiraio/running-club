@@ -10,9 +10,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.running.club.domain.NoticeCreateRequest;
-import com.running.club.domain.NoticeResponse;
-import com.running.club.domain.NoticeUpdateRequest;
+import com.running.club.dto.notice.NoticeCreateRequest;
+import com.running.club.dto.notice.NoticeResponse;
+import com.running.club.dto.notice.NoticeUpdateRequest;
 import com.running.club.service.NoticeService;
 
 import lombok.RequiredArgsConstructor;

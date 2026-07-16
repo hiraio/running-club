@@ -6,10 +6,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.running.club.domain.Notice;
-import com.running.club.domain.NoticeCreateRequest;
-import com.running.club.domain.NoticeResponse;
-import com.running.club.domain.NoticeSummaryDTO;
-import com.running.club.domain.NoticeUpdateRequest;
+import com.running.club.dto.notice.NoticeCreateRequest;
+import com.running.club.dto.notice.NoticeResponse;
+import com.running.club.dto.notice.NoticeSummaryDTO;
+import com.running.club.dto.notice.NoticeUpdateRequest;
 import com.running.club.repository.NoticeRepository;
 
 import lombok.RequiredArgsConstructor;

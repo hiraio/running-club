@@ -23,6 +23,18 @@ Competition → Team → RunningGroup → Member → RunningRecord
 BingoBoard → BingoMission → BingoSubmission (+ bingo_submission_photos)
 ```
 
+### 패키지 구조 (2026-07-16 DTO 분리 리팩토링 — docs/refactoring/ 참고)
+
+```
+com.running.club
+├── domain/      엔티티 + enum만 (14개)
+├── dto/         DTO — 기능별 하위 패키지: auth, member, record, ranking, competition, notice, bingo, common
+├── security/    CustomUserDetails
+├── controller / service / repository / config / scheduler / util
+```
+- JPQL `@Query`의 생성자 표현식은 FQN 사용 (`new com.running.club.dto.ranking.RankingDTO(...)`) — DTO 이동 시 문자열도 같이 수정해야 함
+- 와일드카드 임포트 금지 (전체 제거 완료 — 새 코드에서 다시 만들지 말 것)
+
 ### 핵심 설계 규칙
 
 - **Repository**: 모든 쿼리 `@Query` JPQL 명시. N+1 → `JOIN FETCH`, 대량 수정 → `@Modifying`

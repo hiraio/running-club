@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.running.club.domain.Notice;
-import com.running.club.domain.NoticeSummaryDTO;
+import com.running.club.dto.notice.NoticeSummaryDTO;
 
 public interface NoticeRepository extends JpaRepository<Notice, Integer> {
 
@@ -16,7 +16,7 @@ public interface NoticeRepository extends JpaRepository<Notice, Integer> {
      * 공지사항 목록: 고정글(isPinned=true) 우선, 최신순 정렬.
      * content 제외한 경량 DTO로 조회.
      */
-    @Query("SELECT new com.running.club.domain.NoticeSummaryDTO(n.id, n.title, n.isPinned, n.createdAt) " +
+    @Query("SELECT new com.running.club.dto.notice.NoticeSummaryDTO(n.id, n.title, n.isPinned, n.createdAt) " +
            "FROM Notice n " +
            "ORDER BY n.isPinned DESC, n.createdAt DESC")
     List<NoticeSummaryDTO> findAllSummary();

@@ -8,9 +8,9 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.running.club.domain.AdminHistoryDTO;
+import com.running.club.dto.record.AdminHistoryDTO;
 import com.running.club.domain.Member;
-import com.running.club.domain.RunningRecordDTO;
+import com.running.club.dto.record.RunningRecordDTO;
 import com.running.club.repository.RunningRecordRepository;
 
 import lombok.RequiredArgsConstructor;

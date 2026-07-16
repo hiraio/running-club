@@ -1,6 +1,6 @@
 package com.running.club.service;
 
-import com.running.club.domain.CustomUserDetails;
+import com.running.club.security.CustomUserDetails;
 import com.running.club.domain.Member;
 import com.running.club.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;

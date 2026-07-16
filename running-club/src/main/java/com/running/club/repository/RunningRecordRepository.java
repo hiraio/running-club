@@ -8,11 +8,11 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.running.club.domain.GroupContributionDTO;
+import com.running.club.dto.ranking.GroupContributionDTO;
 import com.running.club.domain.Member;
-import com.running.club.domain.RankingDTO;
+import com.running.club.dto.ranking.RankingDTO;
 import com.running.club.domain.RunningRecord;
-import com.running.club.domain.TodayMvpDTO;
+import com.running.club.dto.record.TodayMvpDTO;
 
 public interface RunningRecordRepository extends JpaRepository<RunningRecord, Integer> {
 
@@ -82,7 +82,7 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
     // ── 랭킹 쿼리 (APPROVED 기록만 집계) ──────────────────────────────────────
 
     // 팀별 랭킹: 팀 id, 팀명, 누적 거리, 기록 수
-    @Query("SELECT new com.running.club.domain.RankingDTO(m.team.id, m.team.teamName, SUM(r.distance), COUNT(r)) " +
+    @Query("SELECT new com.running.club.dto.ranking.RankingDTO(m.team.id, m.team.teamName, SUM(r.distance), COUNT(r)) " +
            "FROM RunningRecord r JOIN r.member m " +
            "WHERE r.status = 'APPROVED' AND m.team IS NOT NULL " +
            "GROUP BY m.team.id, m.team.teamName " +
@@ -90,7 +90,7 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
     List<RankingDTO> getTeamRanking();
 
     // 조별 랭킹: 조 id, 조명, 누적 거리, 기록 수
-    @Query("SELECT new com.running.club.domain.RankingDTO(m.runningGroup.id, m.runningGroup.groupName, SUM(r.distance), COUNT(r)) " +
+    @Query("SELECT new com.running.club.dto.ranking.RankingDTO(m.runningGroup.id, m.runningGroup.groupName, SUM(r.distance), COUNT(r)) " +
            "FROM RunningRecord r JOIN r.member m " +
            "WHERE r.status = 'APPROVED' AND m.runningGroup IS NOT NULL " +
            "GROUP BY m.runningGroup.id, m.runningGroup.groupName " +
@@ -98,7 +98,7 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
     List<RankingDTO> getGroupRanking();
 
     // 개인별 랭킹: 회원 id, 회원명, 누적 거리, 기록 수
-    @Query("SELECT new com.running.club.domain.RankingDTO(m.id, m.name, SUM(r.distance), COUNT(r)) " +
+    @Query("SELECT new com.running.club.dto.ranking.RankingDTO(m.id, m.name, SUM(r.distance), COUNT(r)) " +
            "FROM RunningRecord r JOIN r.member m " +
            "WHERE r.status = 'APPROVED' " +
            "GROUP BY m.id, m.name " +
@@ -108,7 +108,7 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
     // ── 대회별 랭킹 쿼리 (APPROVED + 특정 competition_id 필터) ───────────────
 
     /** 팀별 랭킹 — 특정 대회 기준 (대회 기간 내 기록만 집계) */
-    @Query("SELECT new com.running.club.domain.RankingDTO(m.team.id, m.team.teamName, SUM(r.distance), COUNT(r)) " +
+    @Query("SELECT new com.running.club.dto.ranking.RankingDTO(m.team.id, m.team.teamName, SUM(r.distance), COUNT(r)) " +
            "FROM RunningRecord r JOIN r.member m " +
            "WHERE r.status = 'APPROVED' AND m.team IS NOT NULL AND r.competition.id = :competitionId " +
            "AND r.runningDate >= :startDate AND r.runningDate <= :endDate " +
@@ -119,7 +119,7 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
                                                   @Param("endDate") LocalDate endDate);
 
     /** 조별 랭킹 — 특정 대회 기준 (대회 기간 내 기록만 집계) */
-    @Query("SELECT new com.running.club.domain.RankingDTO(m.runningGroup.id, m.runningGroup.groupName, SUM(r.distance), COUNT(r)) " +
+    @Query("SELECT new com.running.club.dto.ranking.RankingDTO(m.runningGroup.id, m.runningGroup.groupName, SUM(r.distance), COUNT(r)) " +
            "FROM RunningRecord r JOIN r.member m " +
            "WHERE r.status = 'APPROVED' AND m.runningGroup IS NOT NULL AND r.competition.id = :competitionId " +
            "AND r.runningDate >= :startDate AND r.runningDate <= :endDate " +
@@ -130,7 +130,7 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
                                                    @Param("endDate") LocalDate endDate);
 
     /** 개인별 랭킹 — 특정 대회 기준 (날짜 무관, 전 기간 집계) */
-    @Query("SELECT new com.running.club.domain.RankingDTO(m.id, m.name, SUM(r.distance), COUNT(r)) " +
+    @Query("SELECT new com.running.club.dto.ranking.RankingDTO(m.id, m.name, SUM(r.distance), COUNT(r)) " +
            "FROM RunningRecord r JOIN r.member m " +
            "WHERE r.status = 'APPROVED' AND r.competition.id = :competitionId " +
            "GROUP BY m.id, m.name " +
@@ -166,7 +166,7 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
      * 조별 기여도 집계 — 팀 정보(colorCode) 포함.
      * INNER JOIN이므로 APPROVED 기록이 1건 이상 있는 조만 반환.
      */
-    @Query("SELECT new com.running.club.domain.GroupContributionDTO(" +
+    @Query("SELECT new com.running.club.dto.ranking.GroupContributionDTO(" +
            "rg.id, rg.groupName, t.id, t.teamName, t.colorCode, SUM(r.distance), COUNT(r)) " +
            "FROM RunningRecord r " +
            "JOIN r.member m " +
@@ -184,7 +184,7 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
      * 오늘의 MVP 후보 — 당일 APPROVED 기록 누적 거리 내림차순.
      * Pageable(0, 1)로 호출하면 1위만 반환.
      */
-    @Query("SELECT new com.running.club.domain.TodayMvpDTO(" +
+    @Query("SELECT new com.running.club.dto.record.TodayMvpDTO(" +
            "m.id, m.name, t.teamName, t.colorCode, rg.groupName, SUM(r.distance)) " +
            "FROM RunningRecord r " +
            "JOIN r.member m " +
@@ -218,7 +218,7 @@ public interface RunningRecordRepository extends JpaRepository<RunningRecord, In
      * Daily King 후보 — 오늘 APPROVED 기록 누적 거리 내림차순 (대회 무관 전체).
      * Pageable(0, 1) 로 호출하면 1위만 반환.
      */
-    @Query("SELECT new com.running.club.domain.TodayMvpDTO(" +
+    @Query("SELECT new com.running.club.dto.record.TodayMvpDTO(" +
            "m.id, m.name, t.teamName, t.colorCode, rg.groupName, SUM(r.distance)) " +
            "FROM RunningRecord r " +
            "JOIN r.member m " +

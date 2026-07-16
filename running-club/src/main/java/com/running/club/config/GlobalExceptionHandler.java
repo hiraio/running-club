@@ -5,7 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.running.club.domain.ApiResponse;
+import com.running.club.dto.common.ApiResponse;
 
 /**
  * 전역 예외 핸들러.

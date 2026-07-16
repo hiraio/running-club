@@ -1,9 +1,9 @@
 package com.running.club.controller;
 
-import com.running.club.domain.FirstLoginRequest;
-import com.running.club.domain.LoginRequest;
-import com.running.club.domain.MeResponse;
-import com.running.club.domain.SetupAccountRequest;
+import com.running.club.dto.auth.FirstLoginRequest;
+import com.running.club.dto.auth.LoginRequest;
+import com.running.club.dto.auth.MeResponse;
+import com.running.club.dto.auth.SetupAccountRequest;
 import com.running.club.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

@@ -14,11 +14,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.running.club.domain.Competition;
 import com.running.club.domain.Member;
-import com.running.club.domain.RecentFeedResponse;
+import com.running.club.dto.record.RecentFeedResponse;
 import com.running.club.domain.RunningRecord;
-import com.running.club.domain.RunningRecordDTO;
+import com.running.club.dto.record.RunningRecordDTO;
 import com.running.club.domain.Team;
-import com.running.club.domain.TodayMvpDTO;
+import com.running.club.dto.record.TodayMvpDTO;
 import com.running.club.repository.RunningGroupRepository;
 import com.running.club.repository.RunningRecordRepository;
 import com.running.club.repository.TeamRepository;

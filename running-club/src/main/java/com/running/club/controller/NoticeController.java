@@ -7,9 +7,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.running.club.domain.ApiResponse;
-import com.running.club.domain.NoticeResponse;
-import com.running.club.domain.NoticeSummaryDTO;
+import com.running.club.dto.common.ApiResponse;
+import com.running.club.dto.notice.NoticeResponse;
+import com.running.club.dto.notice.NoticeSummaryDTO;
 import com.running.club.service.NoticeService;
 
 import lombok.RequiredArgsConstructor;

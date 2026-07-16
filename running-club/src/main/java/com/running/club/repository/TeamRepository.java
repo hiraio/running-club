@@ -9,8 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.running.club.domain.Team;
-import com.running.club.domain.TeamForJoinDTO;
-import com.running.club.domain.TeamSummaryDTO;
+import com.running.club.dto.auth.TeamForJoinDTO;
+import com.running.club.dto.competition.TeamSummaryDTO;
 
 public interface TeamRepository extends JpaRepository<Team, Integer> {
 
@@ -18,7 +18,7 @@ public interface TeamRepository extends JpaRepository<Team, Integer> {
      * 회원가입 화면용 팀 목록 (경량 DTO).
      * 관리자용 findAllByCompetitionIdWithGroupCount와 달리 groupCount 없이 최소 필드만 조회.
      */
-    @Query("SELECT new com.running.club.domain.TeamForJoinDTO(t.id, t.teamName, t.colorCode) " +
+    @Query("SELECT new com.running.club.dto.auth.TeamForJoinDTO(t.id, t.teamName, t.colorCode) " +
            "FROM Team t " +
            "WHERE t.competition.id = :competitionId " +
            "ORDER BY t.id ASC")
@@ -33,7 +33,7 @@ public interface TeamRepository extends JpaRepository<Team, Integer> {
      * 대회 내 팀 목록 + 조 수 + 대회 기간 내 누적 거리.
      * startDate/endDate로 기록 날짜 범위 필터링.
      */
-    @Query("SELECT new com.running.club.domain.TeamSummaryDTO(" +
+    @Query("SELECT new com.running.club.dto.competition.TeamSummaryDTO(" +
            "t.id, t.teamName, t.colorCode, " +
            "COALESCE((SELECT SUM(r2.distance) FROM RunningRecord r2 JOIN r2.member m2 " +
            "          WHERE m2.team = t AND r2.status = 'APPROVED' " +

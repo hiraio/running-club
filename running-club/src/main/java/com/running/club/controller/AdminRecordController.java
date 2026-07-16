@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.running.club.domain.AdminHistoryDTO;
-import com.running.club.domain.CustomUserDetails;
-import com.running.club.domain.RunningRecordDTO;
+import com.running.club.dto.record.AdminHistoryDTO;
+import com.running.club.security.CustomUserDetails;
+import com.running.club.dto.record.RunningRecordDTO;
 import com.running.club.service.AdminRecordService;
 
 import lombok.RequiredArgsConstructor;

@@ -10,8 +10,8 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 
 import com.running.club.domain.Competition;
-import com.running.club.domain.CompetitionForJoinDTO;
-import com.running.club.domain.CompetitionSummaryDTO;
+import com.running.club.dto.auth.CompetitionForJoinDTO;
+import com.running.club.dto.competition.CompetitionSummaryDTO;
 
 public interface CompetitionRepository extends JpaRepository<Competition, Integer> {
 
@@ -20,7 +20,7 @@ public interface CompetitionRepository extends JpaRepository<Competition, Intege
      * 조건: isActive=true AND endDate >= today → READY + PROCEEDING 상태만 반환
      * isActive=false(관리자 강제 종료)이거나 endDate가 지난 대회는 제외.
      */
-    @Query("SELECT new com.running.club.domain.CompetitionForJoinDTO(" +
+    @Query("SELECT new com.running.club.dto.auth.CompetitionForJoinDTO(" +
            "c.id, c.title, c.startDate, c.endDate, c.isActive) " +
            "FROM Competition c " +
            "WHERE c.isActive = true AND c.endDate >= :today " +
@@ -28,7 +28,7 @@ public interface CompetitionRepository extends JpaRepository<Competition, Intege
     List<CompetitionForJoinDTO> findActiveCompetitions(@Param("today") LocalDate today);
 
     // 전체 목록 + 팀 수 집계 - DTO Projection으로 N+1 차단
-    @Query("SELECT new com.running.club.domain.CompetitionSummaryDTO(" +
+    @Query("SELECT new com.running.club.dto.competition.CompetitionSummaryDTO(" +
            "c.id, c.title, c.startDate, c.endDate, c.isActive, c.createdAt, COUNT(t)) " +
            "FROM Competition c LEFT JOIN c.teams t " +
            "GROUP BY c.id, c.title, c.startDate, c.endDate, c.isActive, c.createdAt " +

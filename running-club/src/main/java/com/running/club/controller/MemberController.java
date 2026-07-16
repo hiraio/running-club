@@ -1,6 +1,17 @@
 package com.running.club.controller;
 
-import com.running.club.domain.*;
+import com.running.club.dto.common.ApiResponse;
+import com.running.club.security.CustomUserDetails;
+import com.running.club.dto.member.GroupMemberDTO;
+import com.running.club.dto.auth.JoinRequest;
+import com.running.club.dto.auth.JoinResponse;
+import com.running.club.domain.Member;
+import com.running.club.dto.member.MemberDashboardResponse;
+import com.running.club.domain.MemberProfile;
+import com.running.club.dto.member.MemberProfileRequest;
+import com.running.club.dto.member.MemberProfileResponse;
+import com.running.club.dto.member.MemberPublicProfileResponse;
+import com.running.club.dto.auth.MeResponse;
 import com.running.club.repository.MemberProfileRepository;
 import com.running.club.repository.MemberRepository;
 import com.running.club.service.MemberService;
@@ -9,7 +20,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor

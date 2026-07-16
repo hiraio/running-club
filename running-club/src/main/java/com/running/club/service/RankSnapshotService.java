@@ -1,6 +1,9 @@
 package com.running.club.service;
 
-import com.running.club.domain.*;
+import com.running.club.domain.Competition;
+import com.running.club.domain.CompetitionStatus;
+import com.running.club.dto.ranking.RankingDTO;
+import com.running.club.domain.RankSnapshot;
 import com.running.club.repository.CompetitionRepository;
 import com.running.club.repository.RankSnapshotRepository;
 import com.running.club.repository.RunningRecordRepository;
@@ -10,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 순위 스냅샷 저장 및 순위 변동(rankChange) 계산 서비스.
