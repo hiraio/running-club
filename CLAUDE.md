@@ -93,6 +93,7 @@ OPTIONS /**, /h2-console/**, /join, /login, /photos/**
 
 - **로컬**: H2 파일 DB (`~/runningdb`), `ddl-auto=update`
 - **운영**: PostgreSQL (Supabase) — `application-prod.properties`
+- **인덱스**: `running_records` 5개 + `rank_snapshots` 1개 — 엔티티 `@Index` 선언 + Supabase 수동 SQL 2중 적용 (`docs/refactoring/04-db-indexes.md`). PostgreSQL은 FK 인덱스 자동 생성 안 함(H2는 함) — 새 인덱스 추가 시 운영 DB에 SQL 직접 실행 필수
 - `DataInitializer.java` 삭제됨 — 개발용 테스트 데이터 초기화 기능 제거 (더 이상 사용하지 않음)
 - `BingoDataInitializer.java` — `@Profile("!prod")` 로컬 전용 빙고 테스트 데이터 초기화 (빙고판+미션+조별 달성현황). `boardRepo.count() > 0`이면 스킵
 

@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -37,7 +38,11 @@ import java.time.LocalDate;
     uniqueConstraints = @UniqueConstraint(
         name = "uq_rank_snapshot",
         columnNames = {"entity_type", "entity_id", "competition_id", "snapshot_date"}
-    )
+    ),
+    // 조회/삭제 패턴 (entity_type, competition_id, snapshot_date)용.
+    // 유니크 제약 인덱스는 2번째 컬럼이 entity_id라 snapshot_date 조건까지 타지 못함 (docs/refactoring/04-db-indexes.md)
+    indexes = @Index(name = "idx_rank_snapshots_type_comp_date",
+                     columnList = "entity_type, competition_id, snapshot_date")
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
